@@ -1355,18 +1355,29 @@ videoPlayer.load();
     ticketFormPanel.classList.add('hidden');
     ticketChatPanel.classList.remove('hidden');
     if (tickUserUnsub) tickUserUnsub();
-    ticketDoc(tid).onSnapshot(d => {
-      const t = d.data(); if (!t) return;
-      ticketBarId.textContent = t.ticketId || tid;
-      ticketBarStatus.textContent = t.status || 'OPEN';
-      ticketBarStatus.className = 'ticket-status st-' + (t.status || 'OPEN').toLowerCase();
-    });
-    tickUserUnsub = ticketMsgs(tid).orderBy('timestamp', 'asc').onSnapshot(snap => {
+    const docRef = ticketDoc(tid);
+    const msgUnsub = ticketMsgs(tid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];
       snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, currentUser.username)); });
       supportMsgs.innerHTML = html.join('') || '<div class="empty-state">Waiting for owner reply...</div>';
       supportMsgs.scrollTop = supportMsgs.scrollHeight;
     });
+    const docUnsub = docRef.onSnapshot(d => {
+      if (!d.exists) {
+        if (tickUserUnsub) tickUserUnsub();
+        activeTicketId = '';
+        localStorage.removeItem(ACTIVE_TICKET_KEY);
+        ticketChatPanel.classList.add('hidden');
+        ticketFormPanel.classList.remove('hidden');
+        showToast('Ticket closed by owner — new ticket banao');
+        return;
+      }
+      const t = d.data(); if (!t) return;
+      ticketBarId.textContent = t.ticketId || tid;
+      ticketBarStatus.textContent = t.status || 'OPEN';
+      ticketBarStatus.className = 'ticket-status st-' + (t.status || 'OPEN').toLowerCase();
+    });
+    tickUserUnsub = () => { msgUnsub(); docUnsub(); };
   }
 
   async function createTicket() {
@@ -1502,6 +1513,12 @@ function newTicketReset() {
     const infoEl = document.getElementById('tickHeadInfo');
     const actsEl = document.getElementById('tickHeadActions');
     ownerTickDocUnsub = ticketDoc(rid).onSnapshot(d => {
+      if (!d.exists) {
+        activeSvcTicket = null;
+        renderOwnerSvc();
+        showToast('Ticket resolved & deleted ✓');
+        return;
+      }
       const t = d.data(); if (!t) return;
       tInfo.uid = t.uid || 'User';
       if (!infoEl || !actsEl) return;
@@ -1509,7 +1526,7 @@ function newTicketReset() {
       actsEl.innerHTML = t.status === 'RESOLVED'
         ? `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','OPEN')">↺ Reopen</button>`
         : `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','IN_PROGRESS')">⏳ In-Progress</button>
-           <button class="btn btn-sm" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved</button>`;
+           <button class="btn btn-sm btn-verify" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved — Close & Delete</button>`;
     });
     ownerMsgUnsub = ticketMsgs(rid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];
@@ -1521,6 +1538,19 @@ function newTicketReset() {
 
   window.__setTicketStatus = (rid, st) => {
     if (!fb.fs) return;
+    if (st === 'RESOLVED') {
+      showToast('Closing ticket — deleting data...');
+      ticketMsgs(rid).get().then(snaps => {
+        const dels = [];
+        snaps.forEach(s => dels.push(s.ref.delete()));
+        return Promise.all(dels).then(() => ticketDoc(rid).delete()).then(() => {
+          activeSvcTicket = null;
+          renderOwnerSvc();
+          showToast('Ticket resolved, closed & deleted ✓');
+        }).catch(e => { console.warn(e); showToast('Delete fail'); });
+      }).catch(e => { console.warn(e); showToast('Delete fail'); });
+      return;
+    }
     ticketDoc(rid).update({ status: st, lastUpdated: Date.now() }).then(() => showToast('Status → ' + st)).catch(() => showToast('Status update fail'));
   };
 
