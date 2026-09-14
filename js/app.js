@@ -217,23 +217,114 @@ const ordersModal   = $('ordersModal');
   const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
   const round5 = n => Math.round(n / 5) * 5;
 
+  /* ─────────── FIREBASE SYNC (cross-device backend) ───────────
+     localStorage = local cache (instant UI) + Firebase = cloud mirror.
+     Har write Firebase par bhi jaata hai; listener remote changes ko
+     localStorage me merge karke UI re-render karta hai. */
+  const fb = { ok: false, db: null, st: null, applying: false };
+  const fbSet = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).set(v).catch(() => {}); return true; };
+  const fbUpdate = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).update(v).catch(() => {}); return true; };
+  const fbPush = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).push(v).catch(() => {}); return true; };
+  const fbUpload = (path, blob) => new Promise((res, rej) => {
+    if (!fb.ok) return rej(new Error('fb off'));
+    const ref = fb.st.ref(path);
+    ref.put(blob).then(s => s.ref.getDownloadURL().then(res)).catch(rej);
+  });
+  function fbOn(path, cb) { if (!fb.ok) return; fb.db.ref(path).on('value', cb); }
+  function fbInit() {
+    if (!window.firebase || !window.FIREBASE_CONFIG) return;
+    try {
+      const app = firebase.initializeApp(window.FIREBASE_CONFIG, 'store');
+      fb.db = firebase.database(app); fb.st = firebase.storage(app); fb.ok = true;
+      console.log('[FB] ready');
+
+      fbOn('users', snap => {
+        const v = snap.val() || {};
+        const local = loadUsers();
+        let me = null;
+        Object.keys(v).forEach(k => {
+          const r = v[k] || {};
+          const l = local[k];
+          if (!l || (r.updatedAt || 0) >= (l.updatedAt || 0)) local[k] = r;
+          if (currentUser && k === currentUser.username) me = r;
+        });
+        localStorage.setItem(USERS_KEY, JSON.stringify(local));
+        if (currentUser && me && (me.updatedAt || 0) >= (currentUser.updatedAt || 0)) currentUser = me;
+        renderProfile();
+        if (currentOwner) { renderOwnerUsers(); renderOwnerDash(); renderOwnerSvc(); renderOwnerVerify(); renderOwnerTxns(); }
+      });
+
+      fbOn('support', snap => {
+        if (fb.applying) return;
+        const v = snap.val() || {};
+        const support = loadSupport();
+        Object.keys(v).forEach(tid => {
+          const meta = v[tid] || {};
+          let t = support.find(x => x.id === tid);
+          const msgs = meta.msgs || {};
+          if (!t) {
+            t = { id: tid, user: meta.user || '', msgs: [], closed: !!meta.closed, createdAt: meta.createdAt || Date.now() };
+            support.push(t);
+          } else { t.user = meta.user || t.user; t.closed = !!meta.closed; }
+          Object.keys(msgs).forEach(mk => {
+            const m = msgs[mk]; if (!m || !m.mid) return;
+            if (!t.msgs.some(x => x.mid === m.mid)) t.msgs.push(Object.assign({}, m, { _k: mk }));
+          });
+          t.msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+        });
+        localStorage.setItem(SUPPORT_KEY, JSON.stringify(support));
+        if (currentUser && !supportModal.classList.contains('hidden')) renderSupportChat();
+        if (currentOwner) { renderOwnerSvc(); checkOwnerAlerts(); }
+      });
+
+      fbOn('txns', snap => {
+        const v = snap.val(); if (!Array.isArray(v)) return;
+        localStorage.setItem(TXN_KEY, JSON.stringify(v));
+        if (currentUser && !txnsModal.classList.contains('hidden')) renderTxns();
+        if (currentOwner) { renderOwnerVerify(); renderOwnerTxns(); renderOwnerDash(); }
+      });
+
+      fbOn('orders', snap => {
+        const v = snap.val(); if (!Array.isArray(v)) return;
+        localStorage.setItem(ORDERS_KEY, JSON.stringify(v));
+        if (currentUser && !ordersModal.classList.contains('hidden')) renderOrders();
+        if (currentOwner) { renderOwnerOrders(); renderOwnerDash(); }
+      });
+
+      fbOn('edits', snap => {
+        const v = snap.val(); if (!v || typeof v !== 'object') return;
+        if (fb.applying) return;
+        localStorage.setItem(EDITOR_KEY, JSON.stringify(v));
+        renderGrid();
+        if (currentOwner && !ownerPanels.classList.contains('hidden')) renderOwnerPanels();
+      });
+
+      fbOn('maint', snap => {
+        const v = snap.val(); if (!v || typeof v !== 'object') return;
+        if (fb.applying) return;
+        localStorage.setItem(MAINT_KEY, JSON.stringify(v));
+        renderGrid();
+      });
+    } catch (e) { console.warn('[FB] init fail', e); }
+  }
+
   const loadUsers  = () => { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch(e) { return {}; } };
-  const saveUsers  = u => localStorage.setItem(USERS_KEY, JSON.stringify(u));
+  const saveUsers  = u => { const nu = {}; Object.keys(u).forEach(k => { const x = Object.assign({}, u[k]); x.updatedAt = Date.now(); nu[k] = x; }); localStorage.setItem(USERS_KEY, JSON.stringify(nu)); if (!fb.applying) Object.keys(nu).forEach(k => fbSet('users/' + k, nu[k])); };
   const loadOrders = () => { try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) || []; } catch(e) { return []; } };
-  const saveOrders = o => localStorage.setItem(ORDERS_KEY, JSON.stringify(o));
+  const saveOrders = o => { localStorage.setItem(ORDERS_KEY, JSON.stringify(o)); if (!fb.applying) fbSet('orders', o); };
   const loadTxns   = () => { try { return JSON.parse(localStorage.getItem(TXN_KEY)) || []; } catch(e) { return []; } };
-  const saveTxns   = t => localStorage.setItem(TXN_KEY, JSON.stringify(t));
+  const saveTxns   = t => { localStorage.setItem(TXN_KEY, JSON.stringify(t)); if (!fb.applying) fbSet('txns', t); };
   const loadSupport= () => { try { return JSON.parse(localStorage.getItem(SUPPORT_KEY)) || []; } catch(e) { return []; } };
   const saveSupport= s => localStorage.setItem(SUPPORT_KEY, JSON.stringify(s));
   const loadMaint  = () => { try { return JSON.parse(localStorage.getItem(MAINT_KEY)) || {}; } catch(e) { return {}; } };
-  const saveMaint  = m => localStorage.setItem(MAINT_KEY, JSON.stringify(m));
+  const saveMaint  = m => { localStorage.setItem(MAINT_KEY, JSON.stringify(m)); if (!fb.applying) fbSet('maint', m); };
   const isMaintenance = name => !!loadMaint()[name];
   const TXN_MINUTES = 10;
 
   /* ─────────── Store editor (owner: panel links / photos / cards sold out) ─────────── */
   const EDITOR_KEY = 'ishu_store_editor';
   const loadEdits = () => { try { return JSON.parse(localStorage.getItem(EDITOR_KEY)) || { panels: {}, cards: {} }; } catch(e) { return { panels: {}, cards: {} }; } };
-  const saveEdits = e => localStorage.setItem(EDITOR_KEY, JSON.stringify(e));
+  const saveEdits = e => { localStorage.setItem(EDITOR_KEY, JSON.stringify(e)); if (!fb.applying) fbSet('edits', e); };
   const editImg = (name, def) => { const c = loadEdits().panels[name]; return (c && c.img) ? c.img : def; };
   const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
   const panelVideo = name => { const c = (loadEdits().panels || {})[name] || {}; return (c.videoUrl || c.videoId) ? { url: c.videoUrl, id: c.videoId, name: c.videoName || '' } : null; };
@@ -363,7 +454,22 @@ const ordersModal   = $('ordersModal');
     }
 
     const u = users[username];
-    if (!u) { showToast('No account found — register first'); setAuthMode('register'); return; }
+    if (!u) {
+      if (fb.ok) {
+        showToast('Checking cloud account...');
+        fb.db.ref('users/' + username).once('value').then(snap => {
+          const r = snap.val();
+          if (!r) { showToast('No account found — register first'); setAuthMode('register'); return; }
+          if (r.banned) { showToast('This account has been banned'); return; }
+          const nu = Object.assign({}, r); nu.updatedAt = Date.now();
+          const all = loadUsers(); all[username] = nu; localStorage.setItem(USERS_KEY, JSON.stringify(all));
+          currentUser = nu;
+          enterStore();
+        }).catch(() => { showToast('No account found — register first'); setAuthMode('register'); });
+        return;
+      }
+      showToast('No account found — register first'); setAuthMode('register'); return;
+    }
     if (u.pass !== pass) { showToast('Wrong password'); return; }
     if (u.banned) { showToast('This account has been banned'); return; }
     if (!u.uid) u.uid = 'USR-' + Date.now().toString(36).toUpperCase();
@@ -1141,7 +1247,9 @@ videoPlayer.load();
     const rows = [];
     for (const t of txns) {
       let ssHtml = '';
-      if (t.ssKey) {
+      if (t.ssUrl) {
+        ssHtml = `<img class="ss-preview" src="${t.ssUrl}" alt="" onclick="window.open('${t.ssUrl}')" style="cursor:zoom-in">`;
+      } else if (t.ssKey) {
         try {
           const blob = await fileGet(t.ssKey);
           if (blob) { const url = URL.createObjectURL(blob); ssHtml = `<img class="ss-preview" src="${url}" alt="" onclick="window.open('${url}')">`; }
@@ -1263,10 +1371,20 @@ videoPlayer.load();
       if (!file) return;
       const key = 'supo_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
       try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
-      t.msgs.push({ from: 'owner', text: '', ts: Date.now(), attach: { name: file.name, type: file.type, size: file.size, key } });
+      const attach = { name: file.name, type: file.type, size: file.size, key };
+      if (fb.ok) {
+        try {
+const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file);
+          if (url) attach.url = url;
+        } catch (e) { console.warn('FB upload fail', e); }
+      }
+      const msg = { from: 'owner', text: '', ts: Date.now(), attach };
+      const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
+      msg.mid = mid;
+      t.msgs.push(msg);
       saveSupport(loadSupport());
       window.__openTicket(ticketId);
-      showToast('Reply + file delivered');
+      showToast('Reply + file delivered ✓ (cross-device sync ON)');
     });
   };
 
@@ -1277,9 +1395,12 @@ videoPlayer.load();
     const support = loadSupport();
     const t = support.find(x => x.id === ticketId);
     if (!t) return;
-    t.msgs.push({ from: 'owner', text, ts: Date.now() });
+    const msg = { from: 'owner', text, ts: Date.now() };
+    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
+    msg.mid = mid;
+    t.msgs.push(msg);
     saveSupport(support);
-    showToast('Reply delivered');
+    showToast('Reply delivered ✓ (cross-device sync ON)');
     window.__openTicket(ticketId);
   };
 
@@ -1357,9 +1478,19 @@ videoPlayer.load();
       t = { id: 'SRV-' + Date.now().toString(36).toUpperCase(), user: currentUser.username, msgs: [], closed: false };
       support.push(t);
       saveSupport(support);
+      fbUpdate('support/' + t.id, { user: currentUser.username, closed: false, createdAt: Date.now() });
+    } else if (fb.ok) {
+      fbUpdate('support/' + t.id, { user: t.user, closed: !!t.closed, createdAt: t.createdAt || Date.now() });
     }
     return t;
   }
+
+  const pushMsg = (tid, msg) => {
+    if (!fb.ok) return null;
+    const ref = fb.db.ref('support/' + tid + '/msgs').push();
+    ref.set(Object.assign({ mid: ref.key }, msg)).catch(() => {});
+    return ref.key;
+  };
 
   const supObjUrls = {};
   function fmtSize(n) { n = n || 0; return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? (n / 1024).toFixed(0) + ' KB' : n + ' B'; }
@@ -1367,6 +1498,12 @@ videoPlayer.load();
   async function attachHtml(m, mine) {
     if (!m.attach) return '';
     const a = m.attach;
+    const cls = mine ? 'att-mine' : 'att-theirs';
+    if (a.url) {
+      if (a.type && a.type.startsWith('image/')) return `<img class="att-preview" src="${a.url}" alt="${escapeHtml(a.name)}">`;
+      if (a.type && a.type.startsWith('video/')) return `<video class="att-video" src="${a.url}" controls preload="metadata"></video>`;
+      return `<a class="att-file-link ${cls}" href="${a.url}" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> ${escapeHtml(a.name)} (${fmtSize(a.size)}) — Download</a>`;
+    }
     if (!a.key) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
     const old = supObjUrls[a.key];
     if (old) URL.revokeObjectURL(old);
@@ -1375,7 +1512,6 @@ videoPlayer.load();
       if (!blob) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
       const url = URL.createObjectURL(blob);
       supObjUrls[a.key] = url;
-      const cls = mine ? 'att-mine' : 'att-theirs';
       if (a.type && a.type.startsWith('image/')) return `<img class="att-preview" src="${url}" alt="${escapeHtml(a.name)}">`;
       if (a.type && a.type.startsWith('video/')) return `<video class="att-video" src="${url}" controls preload="metadata"></video>`;
       return `<a class="att-file-link ${cls}" href="${url}" download="${escapeHtml(a.name)}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> ${escapeHtml(a.name)} (${fmtSize(a.size)}) — Download</a>`;
@@ -1455,10 +1591,20 @@ videoPlayer.load();
     try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
     const support = loadSupport();
     const t = myTicket();
-    t.msgs.push({ from: 'user', text: '', ts: Date.now(), user: currentUser.username, attach: { name: file.name, type: file.type, size: file.size, key } });
+    const attach = { name: file.name, type: file.type, size: file.size, key };
+    if (fb.ok) {
+      try {
+        const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file);
+        if (url) attach.url = url;
+      } catch (e) { console.warn('FB upload fail', e); }
+    }
+    const msg = { from: 'user', text: '', ts: Date.now(), user: currentUser.username, attach };
+    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
+    msg.mid = mid;
+    t.msgs.push(msg);
     saveSupport(support);
     renderSupportChat();
-    showToast('File sent — owner dekh paayega ✓');
+    showToast('File sent — owner dekh paayega ✓ (cross-device sync ON)');
   });
 
   function sendSupportMsg() {
@@ -1466,7 +1612,10 @@ videoPlayer.load();
     if (!text) return;
     const support = loadSupport();
     const t = myTicket();
-    t.msgs.push({ from: 'user', text, ts: Date.now(), user: currentUser.username });
+    const msg = { from: 'user', text, ts: Date.now(), user: currentUser.username };
+    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
+    msg.mid = mid;
+    t.msgs.push(msg);
     supportMsgInput.value = '';
     saveSupport(support);
     renderSupportChat();
@@ -1892,7 +2041,7 @@ videoPlayer.load();
           </div>
 
           ${pending ? (sent
-            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : ''}</div>`
+            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssUrl ? `<img class="shot-thumb" src="${t.ssUrl}" alt="">` : (t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : '')}</div>`
             : `
             <div class="txn-timerbar" data-txn="${t.id}">
               <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -1960,10 +2109,16 @@ videoPlayer.load();
         const ssKey = 'ss_' + hit.id.toLowerCase();
         try { await filePut(ssKey, shot); hit.ss = shot.name; hit.ssKey = ssKey; }
         catch(e) { showToast('Screenshot save failed'); }
+        if (fb.ok) {
+          try {
+            const url = await fbUpload('ss/' + hit.id.toLowerCase() + '/' + Date.now() + '_' + shot.name, shot);
+            if (url) hit.ssUrl = url;
+          } catch (e) { console.warn('FB ss upload fail', e); }
+        }
       }
       saveTxns(all);
       renderTxns();
-      showToast('UTR + screenshot sent — admin verify kar ke credit karega');
+      showToast('UTR + screenshot sent — admin verify kar ke credit karega ✓');
     }
   };
 
@@ -2015,6 +2170,7 @@ videoPlayer.load();
   }, 1000);
 
   /* ─────────── Init ─────────── */
+  fbInit();
   setAuthMode('login');
   renderGrid();
 
