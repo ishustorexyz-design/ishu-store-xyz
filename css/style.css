@@ -1272,3 +1272,15 @@ body::before {
 .oa-body p { margin: 3px 0 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oa-close { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 4px; flex-shrink: 0; }
 .oa-close:hover { color: var(--red); }
+/* ---------- TILE REQUIREMENT CHIPS ---------- */
+.tile-mats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mat-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-size: 11px;
+  font-weight: 700; background: rgba(37,211,102,.08); border: 1px solid rgba(37,211,102,.3);
+  color: #25d366; border-radius: 100px; cursor: pointer; transition: .2s; white-space: nowrap;
+}
+.mat-chip:hover { background: rgba(37,211,102,.18); border-color: rgba(37,211,102,.6); }
+.mat-chip:active { transform: scale(.97); }
+/* wider inputs in editor for long keys/details overflow */
+.mat-editor-row { min-width: 0; }
+.editor-body .txn-input { overflow-wrap: anywhere; white-space: normal; }

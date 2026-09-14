@@ -213,9 +213,37 @@ const ordersModal   = $('ordersModal');
   const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
   const cardSoldOut = name => !!loadEdits().cards[name]?.soldOut;
   const cardImg = name => loadEdits().cards[name]?.img || null;
-  const openMat = m => {
+
+  /* IndexedDB — bade files (APK/EXE) yahan store hote hain, koi size limit nahi */
+  function idb() {
+    return new Promise((res, rej) => {
+      if (window.__idb) return res(window.__idb);
+      const rq = indexedDB.open('ishu_store_files', 1);
+      rq.onupgradeneeded = () => { if (!rq.result.objectStoreNames.contains('files')) rq.result.createObjectStore('files'); };
+      rq.onsuccess = () => { window.__idb = rq.result; res(rq.result); };
+      rq.onerror = () => rej(rq.error);
+    });
+  }
+  const filePut = async (id, blob) => { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(blob, id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); };
+  const fileGet = async id => { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('files', 'readonly').objectStore('files').get(id); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); }); };
+  const fileDel = async id => { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); };
+
+  const openMat = async m => {
     if (m.url) { window.open(m.url, '_blank'); return; }
-    if (m.apk) { const a = document.createElement('a'); a.href = m.apk; a.download = m.label || 'material'; document.body.appendChild(a); a.click(); a.remove(); }
+    if (m.apkId) {
+      const blob = await fileGet(m.apkId);
+      if (!blob) { showToast('File nahi mili — owner se dobara upload karwaye'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = m.apkName || m.label || 'file';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      showToast('Download shuru — check your Downloads');
+      return;
+    }
+    if (m.apk) {
+      const a = document.createElement('a'); a.href = m.apk; a.download = m.label || 'material'; document.body.appendChild(a); a.click(); a.remove();
+    }
   };
 
   function commit() {
@@ -633,13 +661,13 @@ const ordersModal   = $('ordersModal');
   function matRow(i, j, m) {
     m = m || {};
     return `
-      <div class="mat-editor-row" id="mrow_${i}_${j}" data-j="${j}">
+      <div class="mat-editor-row" id="mrow_${i}_${j}" data-j="${j}" data-apkid="${m.apkId || ''}" data-apkname="${(m.apkName || '').replace(/"/g, '&quot;')}">
         <input class="txn-input mat-label" placeholder="Label (jaise: FF Panel APK / Ob34 File)" value="${(m.label || '').replace(/"/g, '&quot;')}">
         <input class="txn-input mat-url" placeholder="MediaFire / koi bhi link (https://...)" value="${(m.url || '').replace(/"/g, '&quot;')}">
         <div class="mat-apkrow">
-          <button class="btn btn-sm ${m.apk ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">${m.apk ? '📦 ' + (m.apkName || 'APK set') : '⬆ Upload APK (PC/phone)'}</button>
-          <input type="file" id="mapk_${i}_${j}" accept=".apk,application/vnd.android.package-archive" hidden onchange="window.__matApk(${i},${j},this)">
-          ${m.apk ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
+          <button class="btn btn-sm ${(m.apkId || m.apk) ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">${(m.apkId || m.apk) ? '📦 ' + (m.apkName || 'APK set') : '⬆ Upload APK/SO/EXE (200MB+ bhi chalega)'}</button>
+          <input type="file" id="mapk_${i}_${j}" hidden onchange="window.__matApk(${i},${j},this)">
+          ${(m.apkId || m.apk) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
         </div>
         <button class="btn btn-sm btn-cancel" onclick="window.__matDel(${i},${j})">✕ Remove</button>
       </div>`;
@@ -761,28 +789,20 @@ const ordersModal   = $('ordersModal');
   window.__matApk = (i, j, input) => {
     const f = input.files[0];
     if (!f) return;
-    if (f.size > 3.5 * 1024 * 1024) {
-      showToast('APK 3.5MB se bada hai — browser me nahi aayega. MediaFire par upload karke link daalo.');
-      input.value = '';
-      return;
-    }
-    const rd = new FileReader();
-    rd.onload = () => {
-      window._apkCache = window._apkCache || {};
-      window._apkCache[i + '_' + j] = { name: f.name, data: rd.result };
-      const row = document.getElementById('mrow_' + i + '_' + j);
-      const btn = row && row.querySelector('.mat-apkrow button');
-      if (btn) btn.textContent = '📦 ' + f.name;
-      showToast('APK ' + f.name + ' ready — Save Panel dabao');
-    };
-    rd.readAsDataURL(f);
+    window._apkFiles = window._apkFiles || {};
+    window._apkFiles[i + '_' + j] = f;
+    const row = document.getElementById('mrow_' + i + '_' + j);
+    const btn = row && row.querySelector('.mat-apkrow button');
+    if (btn) btn.textContent = '📦 ' + f.name + ' (' + (f.size / 1048576).toFixed(1) + ' MB)';
+    showToast('File ready (' + (f.size / 1048576).toFixed(1) + ' MB) — Save Panel dabao');
   };
 
   window.__matApkClear = (i, j) => {
-    if (window._apkCache) delete window._apkCache[i + '_' + j];
     const row = document.getElementById('mrow_' + i + '_' + j);
+    if (row) { row.removeAttribute('data-apkid'); row.removeAttribute('data-apkname'); }
+    if (window._apkFiles) delete window._apkFiles[i + '_' + j];
     const btn = row && row.querySelector('.mat-apkrow button');
-    if (btn) { btn.textContent = '⬆ Upload APK (PC/phone)'; btn.className = 'btn btn-sm btn-ghost'; }
+    if (btn) { btn.textContent = '⬆ Upload APK/SO/EXE (200MB+ bhi chalega)'; btn.className = 'btn btn-sm btn-ghost'; }
     const delBtn = row && row.querySelector('.mat-apkrow .btn-cancel');
     if (delBtn) delBtn.remove();
   };
@@ -795,25 +815,40 @@ const ordersModal   = $('ordersModal');
 
   window.__matDel = (i, j) => {
     const el = document.getElementById('mrow_' + i + '_' + j);
+    const apkId = el && el.getAttribute('data-apkid');
+    if (apkId) fileDel(apkId);
     if (el) el.remove();
-    if (window._apkCache) delete window._apkCache[i + '_' + j];
+    if (window._apkFiles) delete window._apkFiles[i + '_' + j];
   };
 
-  window.__savePanel = (i, name) => {
+  window.__savePanel = async (i, name) => {
     const edits = loadEdits();
     const rows = document.querySelectorAll('#mats_' + i + ' .mat-editor-row');
-    const mats = Array.from(rows).map(row => {
+    const pending = [];
+    for (const row of Array.from(rows)) {
       const j = row.getAttribute('data-j');
+      const f = (window._apkFiles || {})[i + '_' + j];
+      if (f) {
+        const apkId = 'mat_' + Date.now().toString(36) + '_' + i + '_' + j;
+        await filePut(apkId, f);
+        row.setAttribute('data-apkid', apkId);
+        row.setAttribute('data-apkname', f.name.replace(/"/g, '&quot;'));
+        delete window._apkFiles[i + '_' + j];
+      }
+    }
+    const mats = Array.from(rows).map(row => {
       const label = row.querySelector('.mat-label').value.trim();
       const url = row.querySelector('.mat-url').value.trim();
-      const apk = (window._apkCache || {})[i + '_' + j];
-      return { label: label || (apk ? 'APK File' : (url ? 'Open Link' : '')), url, apk: apk ? apk.data : '', apkName: apk ? apk.name : '' };
-    }).filter(m => m.label || m.url || m.apk);
+      const apkId = row.getAttribute('data-apkid') || '';
+      const apkName = (row.getAttribute('data-apkname') || '').replace(/&quot;/g, '"');
+      return {
+        label: label || (apkId ? (apkName || 'APK File') : (url ? 'Open Link' : '')),
+        url, apkId, apkName
+      };
+    }).filter(m => m.label || m.url || m.apkId);
     edits.panels[name] = edits.panels[name] || {};
     edits.panels[name].mats = mats;
     saveEdits(edits);
-    window._apkCache = window._apkCache || {};
-    Object.keys(window._apkCache).forEach(k => { if (k.startsWith(i + '_')) delete window._apkCache[k]; });
     showToast(name + ' saved — LIVE reflect ho gaya ✅');
     renderOwner('panels');
     renderGrid();
@@ -1148,6 +1183,7 @@ const ordersModal   = $('ordersModal');
       const base1h = p.prices[0];
       const { price, off } = priceAfter(base1h);
       const maint = isMaintenance(p.name);
+      const matsT = editMats(p.name);
       return `
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
@@ -1166,6 +1202,7 @@ const ordersModal   = $('ordersModal');
             <div class="price-row">
               <span class="vendor-tag">${maint ? 'TEMPORARILY UNAVAILABLE' : (off ? fmt(price) + ' (was ' + fmt(base1h) + ')' : '1 HR — ' + fmt(base1h))}</span>
             </div>
+            ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map(m => `<button class="mat-chip" onclick="window.openMat(${JSON.stringify(m).replace(/"/g, '&quot;')})">📦 ${m.label}</button>`).join('')}</div>` : ''}
             ${maint
               ? `<button class="btn btn-sm btn-maint" disabled>Under Maintenance</button>`
               : `<button class="btn btn-primary btn-sm" onclick="window.buyItem('${p.name}','panel','${p.img}')">
@@ -1250,7 +1287,7 @@ const ordersModal   = $('ordersModal');
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
         mats.map(m => `<button class="mat-btn" onclick="window.openMat(${JSON.stringify(m).replace(/"/g, '&quot;')})">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
-          <span>${m.label}</span><small>${m.apk ? 'Download ⤓' : 'Open ↗'}</small></button>`).join('');
+          <span>${m.label}</span><small>${m.apkId ? 'Download' : 'Open'}</small></button>`).join('');
     } else {
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
         '<p class="mat-empty">Requirement file jaldi add ho rahi hai — buy ya phir owner se poochein.</p>';
