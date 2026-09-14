@@ -122,6 +122,7 @@ const ordersModal   = $('ordersModal');
     bypass:  'assets/img/panels/pc/bypass-pc-emulator.webp',
     manid:   'assets/img/panels/pc/manid-silentkill-pc.jpg',
     silentPC:'assets/img/panels/pc/silent-aim-pc.webp',
+    external:'assets/img/panels/pc/external-exe-pc.png',
     cardC:   'assets/img/cards/combo-card.png',
     cardG:   'assets/img/cards/golden-card.png',
     cardB:   'assets/img/cards/black-card.png',
@@ -149,11 +150,12 @@ const ordersModal   = $('ordersModal');
   ];
 
   const PC_PANELS = [
-    { img: IMG.aimkill, name: 'AimKill PC',           prices: [45, 105, 225, 1050, 1350, 1800, 2400, 2700, 4800] },
-    { img: IMG.brutal,  name: 'Brutal AimKill PC',    prices: [50, 115, 250, 1150, 1500, 2000, 2650, 3000, 5300] },
-    { img: IMG.bypass,  name: 'Bypass PC Emulator',   prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] },
-    { img: IMG.manid,   name: 'ManID SilentKill',     prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] },
-    { img: IMG.silentPC,name: 'Silent Aim EXE',       prices: [35, 80, 175, 800, 1050, 1400, 1900, 2100, 3700] }
+    { img: IMG.aimkill, name: 'AimKill PC',           tag: 'FOR PC', prices: [45, 105, 225, 1050, 1350, 1800, 2400, 2700, 4800] },
+    { img: IMG.brutal,  name: 'Brutal AimKill PC',    tag: 'FOR PC', prices: [50, 115, 250, 1150, 1500, 2000, 2650, 3000, 5300] },
+    { img: IMG.bypass,  name: 'Bypass PC Emulator',   tag: 'FOR PC', prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] },
+    { img: IMG.manid,   name: 'MAN ID SILENT KILL',   tag: 'FOR PC', prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] },
+    { img: IMG.silentPC,name: 'SILENT AIM INTERNAL',  tag: 'FOR PC', prices: [35, 80, 175, 800, 1050, 1400, 1900, 2100, 3700] },
+    { img: IMG.external,name: 'EXTERNAL EXE FOR PC',  tag: 'FOR PC', prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] }
   ];
 
   const CARDS = [
