@@ -228,7 +228,7 @@ const ordersModal   = $('ordersModal');
   const fileGet = async id => { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('files', 'readonly').objectStore('files').get(id); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); }); };
   const fileDel = async id => { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); };
 
-  const openMat = async m => {
+  window.openMat = async m => {
     if (m.url) { window.open(m.url, '_blank'); return; }
     if (m.apkId) {
       const blob = await fileGet(m.apkId);
