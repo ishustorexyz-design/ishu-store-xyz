@@ -1132,13 +1132,25 @@ videoPlayer.load();
   }
 
   /* ─────────── OWNER: VERIFY (manual) ─────────── */
-  function renderOwnerVerify() {
+  async function renderOwnerVerify() {
     const txns = loadTxns().filter(t => t.status === 'pending').sort((a, b) => Number(b.received || false) - Number(a.received || false) || a.createdAt - b.createdAt);
     const info = `<div class="verify-info">
       <strong>Payment Verify kaise karein?</strong>
       <p>User ne Razorpay se pay kiya ya UTR/screenshot bheja. Neeche check karo — <b>Verify &amp; Credit</b> dabaane par txn SUCCESS ho jayega aur user ke wallet me amount add hoga. Galat/no payment ho to <b>Reject</b>.</p>
     </div>`;
-    ownerVerify.innerHTML = info + (txns.map(t => `
+    const rows = [];
+    for (const t of txns) {
+      let ssHtml = '';
+      if (t.ssKey) {
+        try {
+          const blob = await fileGet(t.ssKey);
+          if (blob) { const url = URL.createObjectURL(blob); ssHtml = `<img class="ss-preview" src="${url}" alt="" onclick="window.open('${url}')">`; }
+          else ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`;
+        } catch(e) { ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`; }
+      } else if (t.ss) {
+        ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`;
+      }
+      rows.push(`
       <div class="admin-row col" style="border-color:${t.received ? 'rgba(255,215,0,.35)' : 'rgba(255,255,255,.06)'}">
         <div class="au-info">
           <strong class="mono">${t.id}</strong>
@@ -1146,12 +1158,14 @@ videoPlayer.load();
         </div>
         ${t.received ? '<div class="gold" style="font-weight:700">● UTR SUBMITTED — awaiting your confirm</div>' : ''}
         ${t.utr ? `<div class="gold">UTR: <span class="mono">${t.utr}</span></div>` : ''}
-        ${t.ss ? `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>` : ''}
+        ${ssHtml}
         <div class="verify-actions">
           <button class="btn btn-sm btn-pay" onclick="window.__ownerVerify('${t.id}')">Verify & Credit</button>
           <button class="btn btn-sm btn-cancel" onclick="window.__ownerReject('${t.id}')">Reject</button>
         </div>
-      </div>`).join('') || '<div class="empty-state">Abhi koi pending payment nahi 🎉</div>');
+      </div>`);
+    }
+    ownerVerify.innerHTML = info + (rows.join('') || '<div class="empty-state">Abhi koi pending payment nahi 🎉</div>');
   }
 
   window.__ownerVerify = id => {
@@ -1878,7 +1892,7 @@ videoPlayer.load();
           </div>
 
           ${pending ? (sent
-            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification</div>`
+            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : ''}</div>`
             : `
             <div class="txn-timerbar" data-txn="${t.id}">
               <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -1912,6 +1926,11 @@ videoPlayer.load();
                 : (t.status === 'cancelled' ? '<div class="txn-foot off">Transaction cancelled</div>' : '')))}
         </div>`;
     }).join('');
+    const th = txnsList.querySelectorAll('.shot-thumb[data-key]');
+    th.forEach(el => {
+      const k = el.getAttribute('data-key');
+      fileGet(k).then(blob => { if (blob) { el.src = URL.createObjectURL(blob); el.classList.remove('hidden'); } }).catch(() => {});
+    });
   }
 
   window.__payTxn = id => {
@@ -1928,7 +1947,7 @@ videoPlayer.load();
     if (hit && hit.status === 'pending') { hit.status = 'cancelled'; saveTxns(all); renderTxns(); showToast('Transaction cancelled'); }
   };
 
-  window.__verifyTxn = id => {
+  window.__verifyTxn = async id => {
     const utr = document.getElementById('utr_' + id)?.value.trim();
     const shot = document.getElementById('shot_' + id)?.files[0];
     if (!utr) { showToast('Enter the UTR number'); return; }
@@ -1937,10 +1956,14 @@ videoPlayer.load();
     if (hit && hit.status === 'pending') {
       hit.received = true;
       hit.utr = utr;
-      if (shot) { hit.ss = shot.name; }
+      if (shot) {
+        const ssKey = 'ss_' + hit.id.toLowerCase();
+        try { await filePut(ssKey, shot); hit.ss = shot.name; hit.ssKey = ssKey; }
+        catch(e) { showToast('Screenshot save failed'); }
+      }
       saveTxns(all);
       renderTxns();
-      showToast('UTR sent — admin will verify & credit your wallet');
+      showToast('UTR + screenshot sent — admin verify kar ke credit karega');
     }
   };
 

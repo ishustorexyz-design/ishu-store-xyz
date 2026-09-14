@@ -1163,6 +1163,8 @@ body::before {
 .owner-msg .att-file-link { color: #ffd700; background: rgba(255,215,0,.1); border: 1px solid rgba(255,215,0,.4); }
 .att-file-link .icon { width: 16px; height: 16px; }
 .att-video { max-width: 240px; border-radius: 10px; margin: 4px 0; border: 1px solid rgba(255,255,255,.12); }
+.ss-preview { display: block; max-width: 260px; max-height: 200px; border-radius: 10px; margin: 8px 0 4px; border: 1px solid rgba(255,215,0,.4); cursor: zoom-in; background:#000; }
+.txn-foot .shot-thumb { display: block; max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 6px; border: 1px solid rgba(255,255,255,.15); }
 
 .support-input-row { display: flex; gap: 8px; align-items: center; border-top: 1px solid rgba(255,255,255,.07); padding-top: 10px; }
 .chat-input {
