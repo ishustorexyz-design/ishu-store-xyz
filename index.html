@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
 
@@ -405,21 +405,40 @@
         <small>Online · replies instantly</small>
       </div>
     </div>
-    <div id="supportMsgs" class="support-msgs">
-      <div class="msg owner-msg">
-        <div class="bubble">Hi! 👋 How can we help you? Send your payment screenshot, video or UTR here.</div>
-        <small>OWNER IS REPLYING YOU</small>
-      </div>
+
+    <!-- ═══════════ TICKET CREATION FORM ═══════════ -->
+    <div id="ticketFormPanel" class="ticket-form hidden">
+      <p class="tf-title">Create a Support Ticket</p>
+      <input id="tfUid" class="login-input" type="text" placeholder="In-Game UID / Username" maxlength="30" autocomplete="off">
+      <select id="tfCat" class="tf-select">
+        <option value="Payment Issue">Payment Issue</option>
+        <option value="Key Not Working">Key Not Working</option>
+        <option value="Ban / Cheat Error">Ban / Cheat Error</option>
+        <option value="Other">Other</option>
+      </select>
+      <textarea id="tfMsg" class="tf-textarea" placeholder="Describe your issue..." maxlength="1000"></textarea>
+      <button id="tfSubmit" class="btn btn-primary btn-block">Create Ticket</button>
+      <small class="tf-note">After creating, you can track this ticket anytime — it will auto-reopen on the last ticket you made ☝️</small>
     </div>
-    <div class="support-input-row">
-      <label class="chat-attach">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
-        <input type="file" id="supportFile" accept="image/*,video/*,application/pdf,application/zip,.rar,.zip,.pdf" hidden>
-      </label>
-      <input id="supportMsg" class="chat-input" type="text" placeholder="Type a message..." maxlength="500">
-      <button id="supportSend" class="chat-send">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      </button>
+
+    <!-- ═══════════ LIVE CHAT THREAD ═══════════ -->
+    <div id="ticketChatPanel" class="ticket-chat hidden">
+      <div class="ticket-bar">
+        <span class="ticket-id" id="ticketBarId"></span>
+        <span class="ticket-status" id="ticketBarStatus"></span>
+        <button class="tf-new" id="tfNewBtn">＋ New Ticket</button>
+      </div>
+      <div id="supportMsgs" class="support-msgs"></div>
+      <div class="support-input-row">
+        <label class="chat-attach">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+          <input type="file" id="supportFile" accept="image/*,video/*,application/pdf,application/zip,.rar,.zip,.pdf" hidden>
+        </label>
+        <input id="supportMsg" class="chat-input" type="text" placeholder="Type a message..." maxlength="500">
+        <button id="supportSend" class="chat-send">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -440,8 +459,9 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=7"></script>
+<script src="js/app.js?v=8"></script>
 </body>
 </html>

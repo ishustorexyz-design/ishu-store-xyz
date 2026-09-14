@@ -8,6 +8,15 @@
        match /{allPaths=**} { allow read, write: if true; }
      }
    }
+   FIRESTORE (Cloud Firestore → Rules tab):
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} { allow read, write: if true; }
+     }
+   }
+   NOTE: Firestore ko Firebase Console → Build → Firestore Database → Create database
+   karke ENABLE karna zaroori hai (rules test mode rakh sakte ho).
 */
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyBxOgUTjX89jgXyg2Mk_H_ZR3Q8h-J_Ru4",

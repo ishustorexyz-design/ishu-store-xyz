@@ -114,6 +114,15 @@ const ordersModal   = $('ordersModal');
   const supportMsgInput = $('supportMsg');
   const supportFile     = $('supportFile');
   const supportSend     = $('supportSend');
+  const ticketFormPanel = $('ticketFormPanel');
+  const ticketChatPanel = $('ticketChatPanel');
+  const tfUid           = $('tfUid');
+  const tfCat           = $('tfCat');
+  const tfMsg           = $('tfMsg');
+  const tfSubmit        = $('tfSubmit');
+  const tfNewBtn        = $('tfNewBtn');
+  const ticketBarId     = $('ticketBarId');
+  const ticketBarStatus = $('ticketBarStatus');
   const videoModal      = $('videoModal');
   const closeVideoBtn   = $('closeVideoBtn');
   const videoPlayer     = $('videoPlayer');
@@ -235,7 +244,7 @@ const ordersModal   = $('ordersModal');
     if (!window.firebase || !window.FIREBASE_CONFIG) return;
     try {
       const app = firebase.initializeApp(window.FIREBASE_CONFIG, 'store');
-      fb.db = firebase.database(app); fb.st = firebase.storage(app); fb.ok = true;
+      fb.db = firebase.database(app); fb.st = firebase.storage(app); fb.fs = firebase.firestore(app); fb.ok = true;
       console.log('[FB] ready');
 
       fbOn('users', snap => {
@@ -252,29 +261,6 @@ const ordersModal   = $('ordersModal');
         if (currentUser && me && (me.updatedAt || 0) >= (currentUser.updatedAt || 0)) currentUser = me;
         renderProfile();
         if (currentOwner) { renderOwnerUsers(); renderOwnerDash(); renderOwnerSvc(); renderOwnerVerify(); renderOwnerTxns(); }
-      });
-
-      fbOn('support', snap => {
-        if (fb.applying) return;
-        const v = snap.val() || {};
-        const support = loadSupport();
-        Object.keys(v).forEach(tid => {
-          const meta = v[tid] || {};
-          let t = support.find(x => x.id === tid);
-          const msgs = meta.msgs || {};
-          if (!t) {
-            t = { id: tid, user: meta.user || '', msgs: [], closed: !!meta.closed, createdAt: meta.createdAt || Date.now() };
-            support.push(t);
-          } else { t.user = meta.user || t.user; t.closed = !!meta.closed; }
-          Object.keys(msgs).forEach(mk => {
-            const m = msgs[mk]; if (!m || !m.mid) return;
-            if (!t.msgs.some(x => x.mid === m.mid)) t.msgs.push(Object.assign({}, m, { _k: mk }));
-          });
-          t.msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-        });
-        localStorage.setItem(SUPPORT_KEY, JSON.stringify(support));
-        if (currentUser && !supportModal.classList.contains('hidden')) renderSupportChat();
-        if (currentOwner) { renderOwnerSvc(); checkOwnerAlerts(); }
       });
 
       fbOn('txns', snap => {
@@ -683,7 +669,8 @@ const ordersModal   = $('ordersModal');
     if (u !== OWNER_USER || p !== OWNER_PASS) { showToast('Invalid owner credentials'); return; }
     if (c !== OWNER_SEC) { showToast('Security code mismatch — access denied'); return; }
     currentOwner = true;
-    loadSupport().forEach(t => { if (t.msgs && t.msgs.length) ownerSeen[t.id] = t.msgs[t.msgs.length - 1].ts || 0; });
+    Object.keys(ownerSeen).forEach(k => delete ownerSeen[k]);
+    watchTickets();
     loginPage.classList.add('hidden');
     app.classList.add('hidden');
     ownerPage.classList.remove('hidden');
@@ -742,9 +729,8 @@ const ordersModal   = $('ordersModal');
     const users = loadUsers();
     const orders = loadOrders();
     const txns = loadTxns();
-    const support = loadSupport();
+    const openTickets = allTickets.filter(t => t.status !== 'RESOLVED');
     const pending = txns.filter(t => t.status === 'pending');
-    const openTickets = support.filter(t => !t.closed);
     const recentUsers = Object.values(users).sort((a, b) => (b.wallet || 0) - (a.wallet || 0)).slice(0, 5);
     ownerDash.innerHTML = `
       <div class="odash">
@@ -1307,118 +1293,268 @@ videoPlayer.load();
     showToast('Transaction rejected');
   };
 
-  /* ─────────── OWNER: SERVICE REQUESTS ─────────── */
-  function renderOwnerSvc() {
-    if (activeSvcTicket) { window.__openTicket(activeSvcTicket); return; }
-    const support = loadSupport().sort((a, b) => (b.msgs[b.msgs.length-1]?.ts || 0) - (a.msgs[a.msgs.length-1]?.ts || 0));
-    ownerSvc.innerHTML = support.map(t => {
-      const last = t.msgs[t.msgs.length - 1];
-      const lastText = last?.attach ? '📎 ' + last.attach.name : (last?.text || '');
-      const ui = loadUsers()[t.user] || {};
-      const uname = ui.name || t.user;
-      const av = ui.photo ? `<img class="chat-av" src="${ui.photo}" alt="">` : `<div class="chat-av chat-av-txt">${escapeHtml((uname || 'U')[0]).toUpperCase()}</div>`;
-      return `
-      <div class="admin-row col svc-row" onclick="window.__openTicket('${t.id}')" style="cursor:pointer">
-        <div class="svc-row-head">
-          ${av}
-          <div class="au-info">
-            <strong>${uname}</strong>
-            <small class="mono">${ui.uid || '—'} · ${t.user}</small>
-          </div>
+/* ─────────── FIRESTORE SUPPORT TICKETS ───────────
+     tickets/{TCK-XXXXXX}  → { ticketId, uid, category, status, createdAt, lastUpdated, lastSender, lastText }
+     tickets/{id}/messages → { sender:'user'|'admin', text, timestamp, attach? }
+     User: localStorage 'ishu_active_ticket' stores the active ticket id for auto-reconnect. */
+  const ACTIVE_TICKET_KEY = 'ishu_active_ticket';
+  const ticketsCol     = () => fb.fs && fb.fs.collection('tickets');
+  const ticketDoc      = id => fb.fs && fb.fs.collection('tickets').doc(id);
+  const ticketMsgs     = id => fb.fs && fb.fs.collection('tickets').doc(id).collection('messages');
+  const genTicketId    = () => 'TCK-' + Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 33)]).join('');
+  const tsNumber       = v => (v && v.toMillis) ? v.toMillis() : (v || 0);
+  const fmtTickTime    = ts => new Date(tsNumber(ts)).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  let activeTicketId   = localStorage.getItem(ACTIVE_TICKET_KEY) || '';
+  let allTickets       = [];
+  const ownerSeen      = {};
+  let tickUserUnsub    = null;
+
+  function tickMsgHtml(m, uid) {
+    const t = m.timestamp ? new Date(tsNumber(m.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    let att = '';
+    if (m.attach && m.attach.url) {
+      att = (m.attach.type || '').startsWith('image/')
+        ? `<img class="att-preview" src="${m.attach.url}" alt="">`
+        : `<a class="att-file-link" href="${m.attach.url}" target="_blank" rel="noopener">📎 ${escapeHtml(m.attach.name || 'file')}</a>`;
+    }
+    const isAdmin = m.sender === 'admin';
+    if (isAdmin) {
+      return `<div class="msg owner-msg">
+        <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
+        <div class="msg-c">
+          <div class="bubble">${escapeHtml(m.text || '')}${att}</div>
+          <div class="msg-meta"><span class="mn">OWNER (ADMIN)</span> · ${t}</div>
         </div>
-        <div class="svc-preview">${lastText.slice(0, 80)}</div>
-        ${!t.closed ? '<span class="gold" style="font-size:11px">Click to open →</span>' : '<div class="muted2">Closed</div>'}
       </div>`;
-    }).join('') || '<div class="empty-state">No service requests yet</div>';
+    }
+    const uname = uid || 'User';
+    return `<div class="msg user-msg">
+      <div class="msg-c">
+        <div class="bubble">${escapeHtml(m.text || '')}${att}</div>
+        <div class="msg-meta"><span class="mn">${escapeHtml(String(uname))}</span> · ${t}</div>
+      </div>
+      ${userAvatar(uname)}
+    </div>`;
   }
 
-  window.__openTicket = ticketId => {
-    activeSvcTicket = ticketId;
-    const support = loadSupport();
-    const t = support.find(x => x.id === ticketId);
-    if (!t) { activeSvcTicket = null; renderOwnerSvc(); return; }
-    const uinfo = loadUsers()[t.user] || {};
-    const uname = uinfo.name || t.user;
-    const uid = uinfo.uid || '—';
-    ownerSvc.innerHTML = `
-      <div class="svc-thread">
-        <button class="btn btn-sm btn-ghost" onclick="activeSvcTicket=null;renderOwnerSvc()" style="margin-bottom:10px">← Back to list</button>
-        <div class="svc-user-label">Chat with <strong>${uname}</strong> · <span class="mono">${uid}</span> (${t.msgs.length} messages)</div>
-        <div class="svc-thread-msgs" id="svcThreadMsgs"></div>
-        <div class="svc-reply-row">
-          <label class="chat-attach">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
-            <input type="file" id="svcReplyFile" accept="image/*,video/*,.pdf,.rar,.zip" hidden>
-          </label>
-          <input id="svcReplyInput" class="chat-input" type="text" placeholder="Type a reply..." maxlength="500">
-          <button class="chat-send" onclick="window.__sendOwnerReply('${t.id}')">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-          </button>
-        </div>
-      </div>`;
-    const msgsEl = document.getElementById('svcThreadMsgs');
-    const render = async () => {
-      const html = [];
-      for (const m of t.msgs) html.push(await msgHtml(m, t.user));
-      msgsEl.innerHTML = html.join('');
-      msgsEl.scrollTop = msgsEl.scrollHeight;
-    };
-    render();
-    const rfile = document.getElementById('svcReplyFile');
-    if (rfile) rfile.addEventListener('change', async () => {
-      const file = rfile.files[0];
-      rfile.value = '';
-      if (!file) return;
-      const key = 'supo_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-      try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
-      const attach = { name: file.name, type: file.type, size: file.size, key };
-      if (fb.ok) {
-        try {
-const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file);
-          if (url) attach.url = url;
-        } catch (e) { console.warn('FB upload fail', e); }
-      }
-      const msg = { from: 'owner', text: '', ts: Date.now(), attach };
-      const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
-      msg.mid = mid;
-      t.msgs.push(msg);
-      saveSupport(loadSupport());
-      window.__openTicket(ticketId);
-      showToast('Reply + file delivered ✓ (cross-device sync ON)');
+  /* ─── USER SIDE: create ticket / live chat ─── */
+  function openUserSupport() {
+    if (!currentUser) { showToast('Login first'); return; }
+    supportModal.classList.remove('hidden');
+    if (activeTicketId) { startTicketThread(activeTicketId); return; }
+    const u = loadUsers()[currentUser.username] || {};
+    if (!tfUid.value) tfUid.value = u.uid || currentUser.username || '';
+    ticketFormPanel.classList.remove('hidden');
+    ticketChatPanel.classList.add('hidden');
+  }
+
+  function startTicketThread(tid) {
+    if (!fb.fs) { showToast('Backend off — try later'); return; }
+    activeTicketId = tid;
+    localStorage.setItem(ACTIVE_TICKET_KEY, tid);
+    ticketFormPanel.classList.add('hidden');
+    ticketChatPanel.classList.remove('hidden');
+    if (tickUserUnsub) tickUserUnsub();
+    ticketDoc(tid).onSnapshot(d => {
+      const t = d.data(); if (!t) return;
+      ticketBarId.textContent = t.ticketId || tid;
+      ticketBarStatus.textContent = t.status || 'OPEN';
+      ticketBarStatus.className = 'ticket-status st-' + (t.status || 'OPEN').toLowerCase();
     });
+    tickUserUnsub = ticketMsgs(tid).orderBy('timestamp', 'asc').onSnapshot(snap => {
+      const html = [];
+      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, currentUser.username)); });
+      supportMsgs.innerHTML = html.join('') || '<div class="empty-state">Waiting for owner reply...</div>';
+      supportMsgs.scrollTop = supportMsgs.scrollHeight;
+    });
+  }
+
+  async function createTicket() {
+    if (!fb.fs) { showToast('Backend off — try later'); return; }
+    const uid = (tfUid.value || '').trim();
+    const cat = tfCat.value || 'Other';
+    const text = (tfMsg.value || '').trim();
+    if (!uid) { showToast('UID / username daalo'); return; }
+    if (!text) { showToast('Apni issue describe karo'); return; }
+    const tid = genTicketId();
+    const now = Date.now();
+    try {
+      await ticketDoc(tid).set({ ticketId: tid, uid, category: cat, status: 'OPEN', createdAt: now, lastUpdated: now, lastSender: 'user', lastText: text.slice(0, 80) });
+      await ticketMsgs(tid).add({ sender: 'user', text, timestamp: now });
+    } catch (e) { console.warn(e); showToast('Firestore write fail'); return; }
+    tfMsg.value = '';
+    startTicketThread(tid);
+    showToast('Ticket ' + tid + ' create ho gayi ✓');
+  }
+
+  function sendTicketMsg() {
+    const text = supportMsgInput.value.trim();
+    if (!text) return;
+    if (!fb.fs || !activeTicketId) { showToast('Pehle ticket banao'); return; }
+    const tid = activeTicketId;
+    supportMsgInput.value = '';
+    ticketMsgs(tid).add({ sender: 'user', text, timestamp: Date.now() }).catch(() => {});
+    ticketDoc(tid).update({ lastUpdated: Date.now(), lastSender: 'user', lastText: text.slice(0, 80) }).catch(() => {});
+  }
+
+function newTicketReset() {
+    activeTicketId = '';
+    localStorage.removeItem(ACTIVE_TICKET_KEY);
+    if (tickUserUnsub) tickUserUnsub();
+    ticketChatPanel.classList.add('hidden');
+    ticketFormPanel.classList.remove('hidden');
+    const u = loadUsers()[currentUser.username] || {};
+    if (!tfUid.value) tfUid.value = u.uid || currentUser.username || '';
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function userAvatar(username) {
+    const u = loadUsers()[username] || {};
+    if (u.photo) return `<img class="chat-av" src="${u.photo}" alt="">`;
+    const ch = escapeHtml((u.name || username || 'U')[0]).toUpperCase();
+    return `<div class="chat-av chat-av-txt">${ch}</div>`;
+  }
+
+  /* ─── ADMIN SIDE: ticket dashboard (sidebar + chat + status toggle) ─── */
+  let ownerTickUnsub = null;
+  let ownerMsgUnsub  = null;
+  let ownerTickDocUnsub = null;
+
+  function watchTickets() {
+    if (!fb.fs || ownerTickUnsub) return;
+    ownerTickUnsub = ticketsCol().orderBy('lastUpdated', 'desc').onSnapshot(snap => {
+      const list = [];
+      snap.forEach(d => list.push(Object.assign({ id: d.id }, d.data())));
+      allTickets = list;
+      if (!ownerSvc.classList.contains('hidden') && !activeSvcTicket) renderTickSidebar(list);
+      checkOwnerAlerts(list);
+    }, err => console.warn('tick snap', err));
+  }
+
+  function renderOwnerSvc() {
+    if (!fb.fs) { ownerSvc.innerHTML = '<div class="empty-state">Firestore connection needed for tickets</div>'; return; }
+    if (activeSvcTicket) { window.__openTicket(activeSvcTicket); return; }
+    ownerSvc.innerHTML = `
+      <div class="tick-admin">
+        <aside class="tick-side">
+          <div class="tick-side-head">
+            <h3>SUPPORT TICKETS</h3>
+            <span class="tick-count" id="tickCount"></span>
+          </div>
+          <div id="tickList" class="tick-list"></div>
+        </aside>
+        <section class="tick-main">
+          <div id="tickHead" class="tick-head">
+            <div class="tick-head-info" id="tickHeadInfo"><span class="muted2">Select a ticket from the sidebar</span></div>
+            <div class="tick-head-actions" id="tickHeadActions"></div>
+          </div>
+          <div id="svcThreadMsgs" class="svc-thread-msgs"></div>
+          <div class="svc-reply-row">
+            <label class="chat-attach">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+              <input type="file" id="svcReplyFile" accept="image/*,video/*,.pdf,.rar,.zip" hidden>
+            </label>
+            <input id="svcReplyInput" class="chat-input" type="text" placeholder="Type a reply..." maxlength="500">
+            <button class="chat-send" onclick="window.__sendOwnerReply()">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
+          </div>
+        </section>
+      </div>`;
+    renderTickSidebar(allTickets);
+    const rfile = document.getElementById('svcReplyFile');
+    if (rfile) rfile.addEventListener('change', ownerSendFile);
+  }
+
+  function renderTickSidebar(list) {
+    const el = document.getElementById('tickList');
+    if (!el) return;
+    const open = list.filter(t => t.status !== 'RESOLVED').length;
+    const cnt = document.getElementById('tickCount');
+    if (cnt) cnt.textContent = open + ' open';
+    el.innerHTML = list.map(t => {
+      const lastUp = t.lastUpdated ? fmtTickTime(t.lastUpdated) : '';
+      const preview = escapeHtml((t.lastText || 'new ticket').slice(0, 60));
+      return `<div class="tick-item ${activeSvcTicket === t.id ? 'active' : ''}" onclick="window.__openTicket('${t.id}')">
+        <div class="tick-item-top">
+          <strong class="mono">${escapeHtml(t.ticketId || t.id)}</strong>
+          <span class="ticket-status st-${(t.status || 'OPEN').toLowerCase()}">${escapeHtml(t.status || 'OPEN')}</span>
+        </div>
+        <div class="tick-item-user">UID ${escapeHtml(t.uid || '—')} · ${escapeHtml(t.category || '')}</div>
+        <div class="tick-item-preview">${preview}</div>
+        <small class="muted2">${lastUp}</small>
+      </div>`;
+    }).join('') || '<div class="empty-state">Koi ticket nahi</div>';
+  }
+
+  let tInfo = { uid: 'User' };
+  window.__openTicket = rid => {
+    activeSvcTicket = rid;
+    if (!fb.fs) return;
+    if (ownerMsgUnsub) ownerMsgUnsub();
+    if (ownerTickDocUnsub) ownerTickDocUnsub();
+    const msgsEl = document.getElementById('svcThreadMsgs');
+    const infoEl = document.getElementById('tickHeadInfo');
+    const actsEl = document.getElementById('tickHeadActions');
+    ownerTickDocUnsub = ticketDoc(rid).onSnapshot(d => {
+      const t = d.data(); if (!t) return;
+      tInfo.uid = t.uid || 'User';
+      if (!infoEl || !actsEl) return;
+      infoEl.innerHTML = `<strong class="mono">${escapeHtml(t.ticketId || rid)}</strong> <span class="muted2">· UID ${escapeHtml(t.uid || '—')} · ${escapeHtml(t.category || '')}</span>`;
+      actsEl.innerHTML = t.status === 'RESOLVED'
+        ? `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','OPEN')">↺ Reopen</button>`
+        : `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','IN_PROGRESS')">⏳ In-Progress</button>
+           <button class="btn btn-sm" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved</button>`;
+    });
+    ownerMsgUnsub = ticketMsgs(rid).orderBy('timestamp', 'asc').onSnapshot(snap => {
+      const html = [];
+      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, tInfo.uid)); });
+      if (msgsEl) { msgsEl.innerHTML = html.join('') || '<div class="empty-state">No messages yet</div>'; msgsEl.scrollTop = msgsEl.scrollHeight; }
+    });
+    ownerSeen[rid] = Date.now();
   };
 
-  window.__sendOwnerReply = ticketId => {
+  window.__setTicketStatus = (rid, st) => {
+    if (!fb.fs) return;
+    ticketDoc(rid).update({ status: st, lastUpdated: Date.now() }).then(() => showToast('Status → ' + st)).catch(() => showToast('Status update fail'));
+  };
+
+  function ownerSendFile() {
+    const rfile = document.getElementById('svcReplyFile');
+    const file = rfile?.files[0];
+    if (!file || !activeSvcTicket || !fb.fs) return;
+    rfile.value = '';
+    fbUpload('tickets/' + activeSvcTicket + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file).then(url => {
+      ticketMsgs(activeSvcTicket).add({ sender: 'admin', text: '', timestamp: Date.now(), attach: { name: file.name, type: file.type, size: file.size, url } });
+      ticketDoc(activeSvcTicket).update({ lastUpdated: Date.now(), lastSender: 'admin', lastText: '📎 ' + file.name.slice(0, 60) }).catch(() => {});
+    }).catch(() => showToast('Upload fail'));
+  }
+
+  window.__sendOwnerReply = () => {
     const input = document.getElementById('svcReplyInput');
     const text = input?.value.trim();
-    if (!text) { showToast('Type a message first'); return; }
-    const support = loadSupport();
-    const t = support.find(x => x.id === ticketId);
-    if (!t) return;
-    const msg = { from: 'owner', text, ts: Date.now() };
-    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
-    msg.mid = mid;
-    t.msgs.push(msg);
-    saveSupport(support);
-    showToast('Reply delivered ✓ (cross-device sync ON)');
-    window.__openTicket(ticketId);
+    if (!text || !activeSvcTicket || !fb.fs) { showToast('Type a message first'); return; }
+    input.value = '';
+    ticketMsgs(activeSvcTicket).add({ sender: 'admin', text, timestamp: Date.now() }).catch(() => {});
+    ticketDoc(activeSvcTicket).update({ lastUpdated: Date.now(), lastSender: 'admin', lastText: text.slice(0, 60) }).catch(() => {});
+    ownerSeen[activeSvcTicket] = Date.now();
+    showToast('Reply delivered ✓ (realtime sync ON)');
   };
 
-  /* ─────────── OWNER LIVE ALERT (WhatsApp style popup) ─────────── */
-  const ownerSeen = {};
+  /* ─── OWNER LIVE ALERT (WhatsApp style popup, Firestore-driven) ─── */
   function showOwnerAlert(t) {
-    const uinfo = loadUsers()[t.user] || {};
-    const uname = uinfo.name || t.user;
-    const uid = uinfo.uid || '—';
-    const last = t.msgs[t.msgs.length - 1];
-    const text = last.attach ? '📎 ' + last.attach.name : (last.text || '');
     const el = document.createElement('div');
     el.className = 'owner-alert';
     el.innerHTML = `
-      <div class="oa-av">${uinfo.photo ? `<img src="${uinfo.photo}" alt="">` : '<span>' + escapeHtml(uname[0] || '?').toUpperCase() + '</span>'}</div>
+      <div class="oa-av"><span>&#128172;</span></div>
       <div class="oa-body">
-        <strong>${escapeHtml(uname)}</strong> <span class="mono">${uid}</span>
-        <p>${escapeHtml(text.slice(0, 70))}</p>
+        <strong>${escapeHtml(t.ticketId || t.id)}</strong> <span class="mono">UID ${escapeHtml(t.uid || '—')}</span>
+        <p>${escapeHtml((t.lastText || 'new ticket').slice(0, 70))}</p>
       </div>
       <button class="oa-close" title="dismiss">✕</button>`;
     el.querySelector('.oa-close').addEventListener('click', e => { e.stopPropagation(); el.remove(); });
@@ -1427,19 +1563,18 @@ const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.nam
     requestAnimationFrame(() => el.classList.add('show'));
     setTimeout(() => el.remove(), 15000);
   }
-  function checkOwnerAlerts() {
+
+  function checkOwnerAlerts(list) {
     if (!currentOwner) return;
-    const support = loadSupport();
-    support.forEach(t => {
-      if (!t.msgs || !t.msgs.length) return;
-      const last = t.msgs[t.msgs.length - 1];
-      if ((ownerSeen[t.id] || 0) >= (last.ts || 0)) return;
-      ownerSeen[t.id] = last.ts || 0;
-      if (last.from === 'owner') return;
-      const viewing = !ownerSvc.classList.contains('hidden') && activeSvcTicket === t.id;
-      if (!viewing) showOwnerAlert(t);
+    list.forEach(t => {
+      if (t.lastSender !== 'user') { ownerSeen[t.id] = tsNumber(t.lastUpdated); return; }
+      if ((ownerSeen[t.id] || 0) >= tsNumber(t.lastUpdated)) return;
+      if (!ownerSvc.classList.contains('hidden') && activeSvcTicket === t.id) { ownerSeen[t.id] = tsNumber(t.lastUpdated); return; }
+      ownerSeen[t.id] = tsNumber(t.lastUpdated);
+      showOwnerAlert(t);
     });
   }
+
   function openOwnerTicket(id) {
     currentOwner = true;
     document.querySelectorAll('.app').forEach(a => a.classList.add('hidden'));
@@ -1448,8 +1583,16 @@ const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.nam
     renderOwner('svc');
     activeSvcTicket = id;
     window.__openTicket(id);
-    showToast('Service request khul gayi');
+    showToast('Ticket khul gayi');
   }
+
+  /* ─── Support modal wiring ─── */
+  closeSupportBtn.addEventListener('click', () => supportModal.classList.add('hidden'));
+  supportFab.addEventListener('click', openUserSupport);
+  tfSubmit.addEventListener('click', createTicket);
+  tfNewBtn.addEventListener('click', newTicketReset);
+  supportSend.addEventListener('click', sendTicketMsg);
+  supportMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendTicketMsg(); });
 
   /* ─────────── LIVE STORE REFRESH (owner edits reflect without reload) ─────────── */
   let lastStoreSig = '';
@@ -1460,182 +1603,7 @@ const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.nam
     if (sig !== lastStoreSig) { lastStoreSig = sig; renderGrid(); }
   }
 
-  /* ─────────── CUSTOMER SUPPORT CHAT ─────────── */
-  function closeSupportModal() { supportModal.classList.add('hidden'); }
-
-  closeSupportBtn.addEventListener('click', closeSupportModal);
-
-  supportFab.addEventListener('click', () => {
-    if (!currentUser) { showToast('Login first'); return; }
-    supportModal.classList.remove('hidden');
-    renderSupportChat();
-  });
-
-  function myTicket() {
-    const support = loadSupport();
-    let t = support.find(x => x.user === currentUser.username);
-    if (!t) {
-      t = { id: 'SRV-' + Date.now().toString(36).toUpperCase(), user: currentUser.username, msgs: [], closed: false };
-      support.push(t);
-      saveSupport(support);
-      fbUpdate('support/' + t.id, { user: currentUser.username, closed: false, createdAt: Date.now() });
-    } else if (fb.ok) {
-      fbUpdate('support/' + t.id, { user: t.user, closed: !!t.closed, createdAt: t.createdAt || Date.now() });
-    }
-    return t;
-  }
-
-  const pushMsg = (tid, msg) => {
-    if (!fb.ok) return null;
-    const ref = fb.db.ref('support/' + tid + '/msgs').push();
-    ref.set(Object.assign({ mid: ref.key }, msg)).catch(() => {});
-    return ref.key;
-  };
-
-  const supObjUrls = {};
-  function fmtSize(n) { n = n || 0; return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? (n / 1024).toFixed(0) + ' KB' : n + ' B'; }
-
-  async function attachHtml(m, mine) {
-    if (!m.attach) return '';
-    const a = m.attach;
-    const cls = mine ? 'att-mine' : 'att-theirs';
-    if (a.url) {
-      if (a.type && a.type.startsWith('image/')) return `<img class="att-preview" src="${a.url}" alt="${escapeHtml(a.name)}">`;
-      if (a.type && a.type.startsWith('video/')) return `<video class="att-video" src="${a.url}" controls preload="metadata"></video>`;
-      return `<a class="att-file-link ${cls}" href="${a.url}" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> ${escapeHtml(a.name)} (${fmtSize(a.size)}) — Download</a>`;
-    }
-    if (!a.key) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
-    const old = supObjUrls[a.key];
-    if (old) URL.revokeObjectURL(old);
-    try {
-      const blob = await fileGet(a.key);
-      if (!blob) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
-      const url = URL.createObjectURL(blob);
-      supObjUrls[a.key] = url;
-      if (a.type && a.type.startsWith('image/')) return `<img class="att-preview" src="${url}" alt="${escapeHtml(a.name)}">`;
-      if (a.type && a.type.startsWith('video/')) return `<video class="att-video" src="${url}" controls preload="metadata"></video>`;
-      return `<a class="att-file-link ${cls}" href="${url}" download="${escapeHtml(a.name)}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> ${escapeHtml(a.name)} (${fmtSize(a.size)}) — Download</a>`;
-    } catch (e) {
-      return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
-    }
-  }
-
-  function userAvatar(username) {
-    const u = loadUsers()[username] || {};
-    if (u.photo) return `<img class="chat-av" src="${u.photo}" alt="">`;
-    const ch = escapeHtml((u.name || username || 'U')[0]).toUpperCase();
-    return `<div class="chat-av chat-av-txt">${ch}</div>`;
-  }
-
-  function msgMeta(uinfo, m) {
-    const uname = escapeHtml(uinfo.name || uinfo.username || 'User');
-    const uid = escapeHtml(uinfo.uid || '—');
-    const t = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `<div class="msg-meta"><span class="mn">${uname}</span> · <span class="mid">${uid}</span> · ${t}</div>`;
-  }
-
-  async function msgHtml(m, ticketUser) {
-    if (m.from === 'owner') {
-      const t = await attachHtml(m, false);
-      return `<div class="msg owner-msg">
-        <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
-        <div class="msg-c">
-          <div class="bubble">${escapeHtml(m.text) || ''}${t}</div>
-          <div class="msg-meta"><span class="mn">OWNER (ADMIN)</span> · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-        </div>
-      </div>`;
-    }
-    const uname = ticketUser || m.user || currentUser.username || 'User';
-    const uinfo = loadUsers()[uname] || { name: uname };
-    const t = await attachHtml(m, true);
-    return `<div class="msg user-msg">
-      <div class="msg-c">
-        <div class="bubble">${escapeHtml(m.text) || ''}${t}</div>
-        ${msgMeta(uinfo, m)}
-      </div>
-      ${userAvatar(uname)}
-    </div>`;
-  }
-
-  async function renderSupportChat() {
-    const t = myTicket();
-    if (t.msgs.length) {
-      const html = [];
-      for (const m of t.msgs) html.push(await msgHtml(m, currentUser.username));
-      supportMsgs.innerHTML = html.join('');
-    } else {
-      supportMsgs.innerHTML = `
-        <div class="msg owner-msg">
-          <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
-          <div class="msg-c">
-            <div class="bubble">Hi! 👋 How can we help you? Send your payment screenshot, video or UTR here.</div>
-          </div>
-        </div>`;
-    }
-    supportMsgs.scrollTop = supportMsgs.scrollHeight;
-  }
-
-  function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-  }
-
-  supportSend.addEventListener('click', sendSupportMsg);
-  supportMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendSupportMsg(); });
-  supportFile.addEventListener('change', async () => {
-    const file = supportFile.files[0];
-    supportFile.value = '';
-    if (!file) return;
-    const key = 'sup_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-    try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
-    const support = loadSupport();
-    const t = myTicket();
-    const attach = { name: file.name, type: file.type, size: file.size, key };
-    if (fb.ok) {
-      try {
-        const url = await fbUpload('support/' + t.id + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file);
-        if (url) attach.url = url;
-      } catch (e) { console.warn('FB upload fail', e); }
-    }
-    const msg = { from: 'user', text: '', ts: Date.now(), user: currentUser.username, attach };
-    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
-    msg.mid = mid;
-    t.msgs.push(msg);
-    saveSupport(support);
-    renderSupportChat();
-    showToast('File sent — owner dekh paayega ✓ (cross-device sync ON)');
-  });
-
-  function sendSupportMsg() {
-    const text = supportMsgInput.value.trim();
-    if (!text) return;
-    const support = loadSupport();
-    const t = myTicket();
-    const msg = { from: 'user', text, ts: Date.now(), user: currentUser.username };
-    const mid = pushMsg(t.id, JSON.parse(JSON.stringify(msg)));
-    msg.mid = mid;
-    t.msgs.push(msg);
-    supportMsgInput.value = '';
-    saveSupport(support);
-    renderSupportChat();
-  }
-
-  /* Zero-delay: storage event fires the instant localStorage changes (owner ↔ user, same browser tabs) */
-  window.addEventListener('storage', e => {
-    if (e.key === SUPPORT_KEY) {
-      if (currentUser && !supportModal.classList.contains('hidden')) renderSupportChat();
-      if (currentOwner) checkOwnerAlerts();
-    }
-  });
-
-  /* Live refresh: owner replies appear instantly (same browser). Real zero-delay across devices needs a backend/host. */
-  setInterval(() => {
-    if (!supportModal.classList.contains('hidden') && currentUser) renderSupportChat();
-    if (currentOwner && !ownerSvc.classList.contains('hidden')) renderOwnerSvc();
-    checkOwnerAlerts();
-    refreshLiveStore();
-  }, 2000);
+setInterval(refreshLiveStore, 2000);
 
   /* ─────────── Sections ─────────── */
   function openSection(tab) {
