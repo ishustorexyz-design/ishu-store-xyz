@@ -664,13 +664,20 @@ const ordersModal   = $('ordersModal');
   function matRow(i, j, m) {
     m = m || {};
     return `
-      <div class="mat-editor-row" id="mrow_${i}_${j}" data-j="${j}" data-apkid="${m.apkId || ''}" data-apkname="${(m.apkName || '').replace(/"/g, '&quot;')}">
+      <div class="mat-editor-row" id="mrow_${i}_${j}" data-j="${j}" data-apkid="${m.apkId || ''}" data-apkname="${(m.apkName || '').replace(/"/g, '&quot;')}" data-icon="${(m.icon || '').replace(/"/g, '&quot;')}">
         <input class="txn-input mat-label" placeholder="Label (jaise: FF Panel APK / Ob34 File)" value="${(m.label || '').replace(/"/g, '&quot;')}">
         <input class="txn-input mat-url" placeholder="MediaFire / koi bhi link (https://...)" value="${(m.url || '').replace(/"/g, '&quot;')}">
         <div class="mat-apkrow">
           <button class="btn btn-sm ${(m.apkId || m.apk) ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">${(m.apkId || m.apk) ? '📦 ' + (m.apkName || 'APK set') : '⬆ Upload APK/SO/EXE (200MB+ bhi chalega)'}</button>
           <input type="file" id="mapk_${i}_${j}" hidden onchange="window.__matApk(${i},${j},this)">
           ${(m.apkId || m.apk) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
+        </div>
+        <div class="mat-iconrow">
+          <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image link / photo link yahan daalo)" value="${(m.iconUrl || '').replace(/"/g, '&quot;')}">
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('maico_${i}_${j}').click()">⬆ Upload Icon</button>
+          <input type="file" id="maico_${i}_${j}" accept="image/*" hidden onchange="window.__matIcon(${i},${j},this)">
+          <img class="mat-icon-prev" id="maiprev_${i}_${j}" src="${m.iconUrl || m.icon || ''}" alt="" ${(m.iconUrl || m.icon) ? '' : 'style="display:none"'}>
+          ${(m.iconUrl || m.icon) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matIconClear(${i},${j})">✕ icon</button>` : ''}
         </div>
         <button class="btn btn-sm btn-cancel" onclick="window.__matDel(${i},${j})">✕ Remove</button>
       </div>`;
@@ -810,6 +817,51 @@ const ordersModal   = $('ordersModal');
     if (delBtn) delBtn.remove();
   };
 
+  function compressIcon(f, cb) {
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = 64; c.height = 64;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        const m = Math.min(64 / img.width, 64 / img.height);
+        const w = img.width * m, h = img.height * m;
+        ctx.drawImage(img, (64 - w) / 2, (64 - h) / 2, w, h);
+        cb(c.toDataURL('image/png'));
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  }
+
+  window.__matIcon = (i, j, input) => {
+    const f = input.files[0];
+    if (!f) return;
+    compressIcon(f, url => {
+      const row = document.getElementById('mrow_' + i + '_' + j);
+      if (!row) return;
+      row.setAttribute('data-icon', url);
+      const prev = document.getElementById('maiprev_' + i + '_' + j);
+      if (prev) { prev.src = url; prev.style.display = 'inline-block'; }
+      input.value = '';
+      showToast('Icon ready — Save Panel dabao ✅ (bada photo bhi auto chhota hota hai)');
+    });
+  };
+
+  window.__matIconClear = (i, j) => {
+    const row = document.getElementById('mrow_' + i + '_' + j);
+    if (row) row.removeAttribute('data-icon');
+    const url = row && row.querySelector('.mat-icon-url');
+    if (url) url.value = '';
+    const prev = document.getElementById('maiprev_' + i + '_' + j);
+    if (prev) prev.remove();
+    const btn = document.getElementById('mrow_' + i + '_' + j);
+    const c = btn && btn.querySelector('.mat-iconrow .btn-cancel');
+    if (c) c.remove();
+  };
+
   window.__matAdd = i => {
     const c = document.getElementById('mats_' + i);
     const n = c.querySelectorAll('.mat-editor-row').length;
@@ -846,7 +898,9 @@ const ordersModal   = $('ordersModal');
       const apkName = (row.getAttribute('data-apkname') || '').replace(/&quot;/g, '"');
       return {
         label: label || (apkId ? (apkName || 'APK File') : (url ? 'Open Link' : '')),
-        url, apkId, apkName
+        url, apkId, apkName,
+        icon: (row.getAttribute('data-icon') || '').replace(/&quot;/g, '"'),
+        iconUrl: (row.querySelector('.mat-icon-url').value || '').trim()
       };
     }).filter(m => m.label || m.url || m.apkId);
     edits.panels[name] = edits.panels[name] || {};
@@ -1207,7 +1261,10 @@ const ordersModal   = $('ordersModal');
             <div class="price-row">
               <span class="vendor-tag">${maint ? 'TEMPORARILY UNAVAILABLE' : (off ? fmt(price) + ' (was ' + fmt(base1h) + ')' : '1 HR — ' + fmt(base1h))}</span>
             </div>
-            ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map((m, mi) => `<button class="mat-chip" onclick="window._openTileMat('${p.name.replace(/'/g, "\\'")}',${mi})">📦 ${m.label}</button>`).join('')}</div>` : ''}
+            ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map((m, mi) => {
+        const ico = m.iconUrl || m.icon || '';
+        return `<button class="mat-chip" onclick="window._openTileMat('${p.name.replace(/'/g, "\\'")}',${mi})">${ico ? `<img class="mat-chip-ico" src="${ico}" alt="">` : '📦'} ${m.label}</button>`;
+      }).join('')}</div>` : ''}
             ${maint
               ? `<button class="btn btn-sm btn-maint" disabled>Under Maintenance</button>`
               : `<button class="btn btn-primary btn-sm" onclick="window.buyItem('${p.name}','panel','${p.img}')">
@@ -1291,9 +1348,12 @@ const ordersModal   = $('ordersModal');
     window._buyMats = mats;
     if (mats.length) {
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
-        mats.map((m, mi) => `<button class="mat-btn" onclick="window._openBuyMat(${mi})">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
-          <span>${m.label}</span><small>${m.apkId ? 'Download' : 'Open'}</small></button>`).join('');
+        mats.map((m, mi) => {
+          const ico = m.iconUrl || m.icon || '';
+          return `<button class="mat-btn" onclick="window._openBuyMat(${mi})">
+          ${ico ? `<img class="mat-btn-ico" src="${ico}" alt="">` : `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>`}
+          <span>${m.label}</span><small>${m.apkId ? 'Download' : 'Open'}</small></button>`;
+        }).join('');
     } else {
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
         '<p class="mat-empty">Requirement file jaldi add ho rahi hai — buy ya phir owner se poochein.</p>';

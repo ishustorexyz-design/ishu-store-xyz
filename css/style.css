@@ -1292,3 +1292,4 @@ body::before {
 /* wider inputs in editor for long keys/details overflow */
 .mat-editor-row { min-width: 0; }
 .editor-body .txn-input { overflow-wrap: anywhere; white-space: normal; }
+/* mat icons */.mat-chip-ico{width:16px;height:16px;border-radius:4px;vertical-align:-3px;object-fit:cover}.mat-iconrow{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}.mat-icon-prev{width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid rgba(0,229,255,.4)}.mat-btn-ico{width:22px;height:22px;border-radius:5px;object-fit:cover;flex:0 0 22px}
