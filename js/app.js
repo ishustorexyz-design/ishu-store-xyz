@@ -229,6 +229,7 @@ const ordersModal   = $('ordersModal');
   const fileDel = async id => { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); };
 
   window.openMat = async m => {
+    if (!m) return;
     if (m.url) { window.open(m.url, '_blank'); return; }
     if (m.apkId) {
       const blob = await fileGet(m.apkId);
@@ -245,6 +246,8 @@ const ordersModal   = $('ordersModal');
       const a = document.createElement('a'); a.href = m.apk; a.download = m.label || 'material'; document.body.appendChild(a); a.click(); a.remove();
     }
   };
+  window._openTileMat = (panelName, idx) => { const mats = (window._tileMats || {})[panelName] || []; window.openMat(mats[idx]); };
+  window._openBuyMat = idx => { const mats = window._buyMats || []; window.openMat(mats[idx]); };
 
   function commit() {
     if (!currentUser) return;
@@ -1184,6 +1187,8 @@ const ordersModal   = $('ordersModal');
       const { price, off } = priceAfter(base1h);
       const maint = isMaintenance(p.name);
       const matsT = editMats(p.name);
+      window._tileMats = window._tileMats || {};
+      window._tileMats[p.name] = matsT;
       return `
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
@@ -1202,7 +1207,7 @@ const ordersModal   = $('ordersModal');
             <div class="price-row">
               <span class="vendor-tag">${maint ? 'TEMPORARILY UNAVAILABLE' : (off ? fmt(price) + ' (was ' + fmt(base1h) + ')' : '1 HR — ' + fmt(base1h))}</span>
             </div>
-            ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map(m => `<button class="mat-chip" onclick="window.openMat(${JSON.stringify(m).replace(/"/g, '&quot;')})">📦 ${m.label}</button>`).join('')}</div>` : ''}
+            ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map((m, mi) => `<button class="mat-chip" onclick="window._openTileMat('${p.name.replace(/'/g, "\\'")}',${mi})">📦 ${m.label}</button>`).join('')}</div>` : ''}
             ${maint
               ? `<button class="btn btn-sm btn-maint" disabled>Under Maintenance</button>`
               : `<button class="btn btn-primary btn-sm" onclick="window.buyItem('${p.name}','panel','${p.img}')">
@@ -1283,9 +1288,10 @@ const ordersModal   = $('ordersModal');
 
     const mats = editMats(name);
     panelMaterials.classList.remove('hidden');
+    window._buyMats = mats;
     if (mats.length) {
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
-        mats.map(m => `<button class="mat-btn" onclick="window.openMat(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+        mats.map((m, mi) => `<button class="mat-btn" onclick="window._openBuyMat(${mi})">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
           <span>${m.label}</span><small>${m.apkId ? 'Download' : 'Open'}</small></button>`).join('');
     } else {
