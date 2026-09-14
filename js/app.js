@@ -217,6 +217,7 @@ const ordersModal   = $('ordersModal');
   const editImg = (name, def) => { const c = loadEdits().panels[name]; return (c && c.img) ? c.img : def; };
   const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
   const panelVideo = name => { const c = (loadEdits().panels || {})[name] || {}; return (c.videoUrl || c.videoId) ? { url: c.videoUrl, id: c.videoId, name: c.videoName || '' } : null; };
+  const panelSetupVid = name => { const c = (loadEdits().panels || {})[name] || {}; return c.setupVideo ? c.setupVideo.trim() : ''; };
   const cardSoldOut = name => !!loadEdits().cards[name]?.soldOut;
   const cardImg = name => loadEdits().cards[name]?.img || null;
 
@@ -696,6 +697,7 @@ const ordersModal   = $('ordersModal');
       const cfg = loadEdits().panels[p.name] || {};
       const isOn = !maint[p.name];
       const mats = (cfg.mats && cfg.mats.length) ? cfg.mats : [{}];
+      const setupVid = panelSetupVid(p.name);
       return `
         <div class="editor-card">
           <div class="editor-head">
@@ -717,6 +719,9 @@ const ordersModal   = $('ordersModal');
               <input type="file" id="panVid_${i}" accept="video/*" hidden onchange="window.__pickPanelVideo('${p.name}', this)">
               <input class="txn-input mat-icon-url" placeholder="Ya video URL (YouTube / direct link)" value="${(cfg.videoUrl || '').replace(/"/g, '&quot;')}" onchange="window.__setPanelVideoUrl('${p.name}', this.value)">
               ${(cfg.videoId || cfg.videoUrl) ? `<button class="btn btn-sm btn-cancel" onclick="window.__clearPanelVideo('${p.name}')">✕ video</button>` : ''}
+            </div>
+            <div class="mat-iconrow">
+              <input class="txn-input mat-icon-url" placeholder="▶ Setup Video — YouTube link (https://youtube.com/watch?v=...)" value="${(setupVid || '').replace(/"/g, '&quot;')}" onchange="window.__setSetupVideo('${p.name}', this.value)">
             </div>
             <p class="editor-label">Requirement Links / APK — user ko BUY se pehle dikhte hain</p>
             <div id="mats_${i}">${mats.map((m, j) => matRow(i, j, m)).join('')}</div>
@@ -855,6 +860,23 @@ window.__pickCardImg = (name, input) => {
     renderOwner('panels');
     renderGrid();
     showToast('Video hata diya');
+  };
+
+  window.__setSetupVideo = (name, url) => {
+    const edits = loadEdits();
+    edits.panels[name] = edits.panels[name] || {};
+    url = (url || '').trim();
+    if (url) edits.panels[name].setupVideo = url;
+    else delete edits.panels[name].setupVideo;
+    saveEdits(edits);
+    renderOwner('panels');
+    renderGrid();
+  };
+
+  window.__openSetupVideo = name => {
+    const link = panelSetupVid(name);
+    if (!link) { showToast('Setup video abhi nahi hai — YouTube par jaldi aayega'); return; }
+    window.open(link, '_blank');
   };
 
   window.__playPanelVideo = async name => {
@@ -1429,8 +1451,13 @@ videoPlayer.load();
     const mats = editMats(name);
     panelMaterials.classList.remove('hidden');
     window._buyMats = mats;
+    const setupLink = panelSetupVid(name);
+    const setupHtml = setupLink ? `<button class="mat-btn setup-video-btn" onclick="window.open('${setupLink.replace(/'/g, "\\'")}','_blank')">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <span>Setup Video</span><small>YouTube ▶</small></button>` : '';
     if (mats.length) {
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
+        setupHtml +
         mats.map((m, mi) => {
           const ico = m.iconUrl || m.icon || '';
           return `<button class="mat-btn" onclick="window._openBuyMat(${mi})">
@@ -1438,7 +1465,7 @@ videoPlayer.load();
           <span>${m.label}</span><small>${m.apkId ? 'Download' : 'Open'}</small></button>`;
         }).join('');
     } else {
-      panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
+      panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' + setupHtml +
         '<p class="mat-empty">Requirement file jaldi add ho rahi hai — buy ya phir owner se poochein.</p>';
     }
 
