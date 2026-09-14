@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISHU STORE XYZ — Premium Panels & Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════ LOGIN PAGE ═══════════ -->
+<div id="loginPage" class="login-page">
+  <div class="login-bg-glow glow-a"></div>
+  <div class="login-bg-glow glow-b"></div>
+
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="assets/img/logo/login-logo.png" alt="ISHU STORE XYZ Logo" class="login-logo-img" onerror="this.style.display='none'">
+      <h1 class="store-name">ISHU <span>STORE</span> XYZ</h1>
+      <p class="login-tag">PREMIUM PANELS · MODS · CARDS · CC</p>
+    </div>
+
+    <div class="login-box">
+      <div class="auth-tabs">
+        <button id="authTabLogin" class="auth-tab active" data-mode="login">Login</button>
+        <button id="authTabRegister" class="auth-tab" data-mode="register">Register</button>
+      </div>
+
+      <h2 id="authTitle">Welcome Back</h2>
+      <p class="login-sub" id="authSub">Access premium panels, cards & tools</p>
+
+      <div id="g_id_onload" data-client_id="PASTE_YOUR_GOOGLE_CLIENT_ID" data-login_uri="https://myapp.example.com" data-auto_prompt="false"></div>
+      <div id="googleButton" class="google-btn-wrap"></div>
+
+      <div class="divider"><span>OR WITH ACCOUNT</span></div>
+
+      <input id="loginName" type="text" class="login-input" placeholder="Username..." maxlength="20" autocomplete="username">
+      <input id="loginPass" type="password" class="login-input" placeholder="Password..." maxlength="32" autocomplete="current-password">
+
+      <button id="authSubmitBtn" class="auth-submit-btn">
+        <span class="btn-label" id="authSubmitLabel">Login</span>
+      </button>
+
+      <button id="ownerLoginToggle" class="owner-login-toggle">Owner Login</button>
+
+      <div id="ownerLoginBox" class="owner-login-box hidden">
+        <p class="owner-toggle-title">OWNER ONLY — ADMIN ACCESS</p>
+        <input id="ownerUser" type="text" class="login-input" placeholder="Owner username" maxlength="20" autocomplete="off">
+        <input id="ownerPass" type="password" class="login-input" placeholder="Owner password" maxlength="32" autocomplete="off">
+        <input id="ownerCode" type="password" class="login-input" placeholder="Security code" maxlength="10" autocomplete="off">
+        <button id="ownerLoginBtn" class="auth-submit-btn btn-small">
+          <span class="btn-label">Enter Dashboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ OWNER DASHBOARD ═══════════ -->
+<div id="ownerPage" class="app owner hidden">
+  <nav class="navbar">
+    <div class="nav-logo">
+      <img src="assets/img/logo/login-logo.png" alt="Logo" class="nav-logo-img" onerror="this.style.display='none'">
+      <h2 class="store-name sm">OWNER <span>PANEL</span></h2>
+    </div>
+    <button id="ownerMenuBtn" class="owner-menu-btn" title="Menu">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </nav>
+
+  <div id="ownerMenuOverlay" class="owner-menu-overlay hidden"></div>
+  <aside id="ownerMenu" class="owner-menu hidden">
+    <div class="owner-menu-head">
+      <span>OWNER PANEL</span>
+      <button id="ownerMenuClose" class="owner-menu-close">✕</button>
+    </div>
+    <button class="omenu-item active" data-o="dash">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </button>
+    <button class="omenu-item" data-o="svc">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
+      Service Requests
+    </button>
+    <button class="omenu-item" data-o="verify">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+      Verify Payments
+    </button>
+    <button class="omenu-item" data-o="users">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      Users
+    </button>
+    <button class="omenu-item" data-o="orders">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
+      Orders
+    </button>
+    <button class="omenu-item" data-o="panels">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8"/></svg>
+      Panels
+    </button>
+    <button class="omenu-item" data-o="txns">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l4-4 4 4M7 3v18M21 17l-4 4-4-4M17 21V3"/></svg>
+      Transactions
+    </button>
+    <div class="owner-menu-foot">
+      <button id="ownerLogoutBtn" class="btn btn-sm btn-ghost">Back to Store</button>
+    </div>
+  </aside>
+
+  <section class="owner-body">
+    <div id="ownerDash" class="owner-pane"></div>
+    <div id="ownerSvc" class="owner-pane hidden"></div>
+    <div id="ownerVerify" class="owner-pane hidden"></div>
+    <div id="ownerUsers" class="owner-pane hidden"></div>
+    <div id="ownerOrders" class="owner-pane hidden"></div>
+    <div id="ownerPanels" class="owner-pane hidden"></div>
+    <div id="ownerTxns" class="owner-pane hidden"></div>
+  </section>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="app" class="app hidden">
+
+  <!-- Top Navbar -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <img src="assets/img/logo/login-logo.png" alt="Logo" class="nav-logo-img" onerror="this.style.display='none'">
+      <h2 class="store-name sm">ISHU <span>STORE</span> XYZ</h2>
+    </div>
+
+    <div class="nav-links">
+      <a href="#panels" class="nav-link active" data-nav="panels">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/><circle cx="12" cy="10" r="3"/></svg>
+        Panels
+      </a>
+      <a href="#cards" class="nav-link" data-nav="cards">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+        Cards
+      </a>
+    </div>
+
+    <div class="nav-right">
+      <button id="walletPill" class="wallet-pill" title="Wallet Balance">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg>
+        <span id="walletBalance">₹0</span>
+      </button>
+
+      <div class="dropdown-wrap" id="userMenu">
+        <button class="avatar-trigger" id="avatarTrigger">
+          <img id="navAvatar" class="nav-avatar" src="" alt="Profile">
+          <img id="navBadgeImg" class="badge-img sm" alt="">
+        </button>
+        <div class="dropdown hidden" id="dropdownMenu">
+          <div class="dd-head">
+            <img id="ddAvatar" src="" alt="">
+            <div>
+              <strong id="ddName">Player</strong>
+              <small id="ddUid" class="dd-uid">USER ID: —</small>
+            </div>
+            <img id="ddBadgeImg" class="badge-img sm dd-badge" src="" alt="">
+          </div>
+          <div class="dd-divider"></div>
+          <button class="dd-item" id="ddOrders">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
+            My Orders
+          </button>
+          <button class="dd-item" id="ddTxns">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l4-4 4 4M7 3v18M21 17l-4 4-4-4M17 21V3"/></svg>
+            Transactions
+          </button>
+          <button class="dd-item danger" id="ddLogout">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-glow"></div>
+    <p class="hero-top">AIMKILL | PANELS | MODS | CC</p>
+    <h1 class="hero-title">Premium <span class="grad-text">Mod Panels</span><br>& Top Rated <span class="grad-text2">Cards</span></h1>
+    <p class="hero-sub">Non-Root mobile panels · PC panels · Cards (CC) · Fast delivery</p>
+    <div class="hero-cta">
+      <a href="#panels" class="btn btn-primary" data-nav="panels">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/></svg>
+        See Panels
+      </a>
+      <a href="#cards" class="btn btn-ghost" data-nav="cards">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        See Cards
+      </a>
+    </div>
+  </header>
+
+  <!-- Profile / Member Bar -->
+  <section class="profile-strip">
+    <div class="profile-card">
+      <div class="pc-info">
+        <p class="pc-greet">WELCOME BACK</p>
+        <h3 id="profileName">Player</h3>
+        <div class="pc-idrow">
+          <span class="pc-id-chip">USER ID: <b id="pcUid">—</b></span>
+        </div>
+      </div>
+      <div class="pc-stats">
+        <div class="stat"><span id="statBalance">₹0</span><small>Wallet</small></div>
+        <div class="stat"><span id="statPurchases">0</span><small>Purchases</small></div>
+      </div>
+      <div class="pc-actions">
+        <button id="openOrdersBtn" class="btn btn-sm btn-ghost">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
+          My Orders
+        </button>
+        <button id="openDepositBtn" class="btn btn-sm btn-primary">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Add Funds
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reseller Progress Bar — visible to every logged-in user -->
+  <section id="resellerStrip" class="reseller-strip hidden">
+    <div class="reseller-card">
+      <div class="reseller-head">
+        <h3>RESELLING ACCESS</h3>
+        <span id="resellerStatus" class="reseller-status locked">LOCKED</span>
+      </div>
+      <p id="resellerMsg">Deposit ₹500 to unlock Premium VIP badge + 60% OFF</p>
+      <div class="progress-track">
+        <div id="resellerProgress" class="progress-fill" style="width:0%"></div>
+      </div>
+      <p id="resellerDepInfo">₹0 / ₹500</p>
+    </div>
+  </section>
+
+  <!-- Sections nav -->
+  <div class="section-tabs">
+    <button id="tabPanels" class="tab-btn active" data-tab="panels">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/><circle cx="12" cy="10" r="3"/></svg>
+      PANELS
+    </button>
+    <button id="tabCards" class="tab-btn" data-tab="cards">
+      <img src="assets/img/cards/section-banner.png" alt="" class="tab-img">
+      CARDS
+    </button>
+  </div>
+
+  <!-- ═══════════ PANEL SECTION ═══════════ -->
+  <section id="panels" class="section">
+    <div class="section-head">
+      <h2>MOD PANELS</h2>
+      <p>Mobile non-root & PC premium panels</p>
+    </div>
+
+    <div class="sub-tabs">
+      <button class="subtab-btn active" data-group="mobile">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+        MOBILE PANELS
+      </button>
+      <button class="subtab-btn" data-group="pc">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        PC PANELS
+      </button>
+    </div>
+
+    <div id="panelGrid" class="grid"></div>
+  </section>
+
+  <!-- ═══════════ CARD SECTION ═══════════ -->
+  <section id="cards" class="section hidden">
+    <div class="section-head">
+      <h2>CARDS</h2>
+      <p>Order your card — details delivered securely after confirmation</p>
+    </div>
+    <div id="cardGrid" class="grid"></div>
+  </section>
+
+  <footer class="footer">
+    <p>ISHU STORE XYZ © 2026 · All rights reserved</p>
+    <p class="footer-muted">Telegram: @ishu_store</p>
+  </footer>
+</div>
+
+<!-- ═══════════ DEPOSIT MODAL (RAZORPAY CHECKOUT) ═══════════ -->
+<div id="depositModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="closeDepositBtn">✕</button>
+    <h3>Add Funds — Deposit</h3>
+    <p class="modal-sub">Min ₹10 · Max ₹5000 — Razorpay checkout</p>
+
+    <div class="amount-quick">
+      <button class="q-btn" data-amt="10">₹10</button>
+      <button class="q-btn" data-amt="100">₹100</button>
+      <button class="q-btn" data-amt="300">₹300</button>
+      <button class="q-btn" data-amt="500">₹500</button>
+      <button class="q-btn" data-amt="1000">₹1000</button>
+    </div>
+
+    <input id="depositAmount" type="number" min="10" max="5000" placeholder="Amount (₹10 - ₹5000)">
+
+    <button id="confirmDepositBtn" class="btn btn-primary btn-block">Pay with Razorpay</button>
+    <p class="modal-note">You will be redirected to secure Razorpay checkout for payment.</p>
+  </div>
+</div>
+
+<!-- ═══════════ DURATION MODAL ═══════════ -->
+<div id="durationModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="closeDurationBtn">✕</button>
+    <h3 id="durationItemName">Panel</h3>
+    <p class="modal-sub" id="durationHint">Select a duration — price updates automatically</p>
+
+    <div id="durationList" class="duration-list"></div>
+
+    <div id="panelMaterials" class="panel-materials hidden"></div>
+
+    <button id="confirmDurationBuy" class="btn btn-primary btn-block">Confirm Buy</button>
+    <p class="modal-note" id="resellerOffNote">Premium VIP: 60% OFF applied</p>
+  </div>
+</div>
+
+<!-- ═══════════ TRANSACTIONS MODAL ═══════════ -->
+<div id="txnsModal" class="modal hidden">
+  <div class="modal-card modal-wide">
+    <button class="modal-close" id="closeTxnsBtn">✕</button>
+    <h3>Transaction History</h3>
+    <p class="modal-sub">Pending → Paid / Failed · UTR & screenshot verify</p>
+    <div id="txnsList" class="orders-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════ ORDERS MODAL ═══════════ -->
+<div id="ordersModal" class="modal hidden">
+  <div class="modal-card modal-wide">
+    <button class="modal-close" id="closeOrdersBtn">✕</button>
+    <h3>My Orders</h3>
+    <p class="modal-sub">Pending → Accepted → Success · card details after success</p>
+    <div id="ordersList" class="orders-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════ SUPPORT CHAT MODAL ═══════════ -->
+<div id="supportModal" class="modal hidden">
+  <div class="modal-card support-card">
+    <button class="modal-close" id="closeSupportBtn">✕</button>
+    <div class="support-head">
+      <img src="assets/img/logo/login-logo.png" alt="Owner" onerror="this.style.display='none'">
+      <div>
+        <strong>OWNER · ISHU STORE</strong>
+        <small>Online · replies instantly</small>
+      </div>
+    </div>
+    <div id="supportMsgs" class="support-msgs">
+      <div class="msg owner-msg">
+        <div class="bubble">Hi! 👋 How can we help you? Send your payment screenshot, video or UTR here.</div>
+        <small>OWNER IS REPLYING YOU</small>
+      </div>
+    </div>
+    <div class="support-input-row">
+      <label class="chat-attach">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+        <input type="file" id="supportFile" accept="image/*,video/*" hidden>
+      </label>
+      <input id="supportMsg" class="chat-input" type="text" placeholder="Type a message..." maxlength="500">
+      <button id="supportSend" class="chat-send">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating support button -->
+<button id="supportFab" class="support-fab hidden" title="Customer Support">
+  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
+  Support
+</button>
+
+<!-- ═══════════ SUCCESS TOAST ═══════════ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="js/app.js"></script>
+</body>
+</html>
