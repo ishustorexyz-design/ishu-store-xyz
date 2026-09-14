@@ -351,10 +351,11 @@ body::before {
   object-fit: cover;
   border: 2px solid var(--border);
 }
+.dd-head > div { flex: 1; min-width: 0; }
 .dd-head strong { display: block; font-size: 15px; }
   .dd-head small { color: var(--muted); font-size: 12px; }
   .dd-uid { color: #ffd700 !important; font-family: Consolas, Menlo, monospace; font-size: 11px !important; letter-spacing: .5px; }
-  .dd-badge { margin-left: auto; width: 38px; height: 38px; object-fit: contain; }
+  .dd-badge { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; margin-right: 2px; }
 .dd-divider { height: 1px; background: var(--border); margin: 6px 0; }
 .dd-item {
   display: flex;
@@ -1227,3 +1228,47 @@ body::before {
 .mat-btn:hover { background: rgba(255,215,0,.14); border-color: rgba(255,215,0,.6); }
 .mat-btn .icon { width: 18px; height: 18px; color: #2ecc71; flex-shrink: 0; }
 .mat-btn small { margin-left: auto; font-size: 10.5px; color: #9aa0b5; letter-spacing: .5px; }
+/* ---------- OWNER STORE EDITOR ---------- */
+.editor-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+.editor-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.editor-thumb { width: 46px; height: 46px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+.editor-thumb.card { width: 42px; height: 28px; border-radius: 6px; }
+.editor-name { flex: 1 1 120px; min-width: 0; }
+.editor-name strong { display: block; font-size: 14px; }
+.editor-name small { color: var(--muted); font-size: 11px; }
+.editor-body { margin-top: 12px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; }
+.editor-label { font-size: 11px; letter-spacing: 1.5px; color: #ffd700; font-weight: 800; margin: 10px 0 8px; }
+.editor-actions { display: flex; gap: 8px; margin-top: 12px; }
+.editor-actions .btn { width: 100%; }
+.mat-editor-row { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.mat-editor-row .txn-input { flex: 1 1 180px; min-width: 140px; }
+.mat-apkrow { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+.mat-empty { color: var(--muted); font-size: 12.5px; background: rgba(255,255,255,.03); border-radius: 8px; padding: 10px; }
+.activity-divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* ---------- OVERFLOW FIX (long keys/details bahar nahi niklenge) ---------- */
+.au-info, .editor-name, .admin-row.col .au-info { min-width: 0; }
+.au-info .mono, .admin-row .mono, .editor-name .mono { word-break: break-all; overflow-wrap: anywhere; white-space: normal; }
+.admin-row .gold, .admin-row .red, .order-note.gold, .order-note.red { word-break: break-word; overflow-wrap: anywhere; }
+.txn-input, .mat-url, .mat-label { overflow-wrap: anywhere; }
+.order-actions .txn-input { min-height: 38px; }
+.tile-tag.sold { background: rgba(255,80,80,.92); }
+/* ---------- OWNER LIVE ALERT (WhatsApp style) ---------- */
+.owner-alerts { position: fixed; right: 16px; bottom: 90px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 310px; max-width: calc(100vw - 32px); }
+.owner-alert {
+  display: flex; align-items: center; gap: 10px; padding: 12px;
+  background: #0b1626; border: 1px solid rgba(255,255,255,.12); border-left: 3px solid #25d366;
+  border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.45); cursor: pointer;
+  transform: translateX(120%); opacity: 0; transition: all .35s cubic-bezier(.2,.9,.3,1.2);
+}
+.owner-alert.show { transform: none; opacity: 1; }
+.owner-alert:hover { border-color: rgba(37,211,102,.7); }
+.oa-av { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: var(--grad); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.oa-av img { width: 100%; height: 100%; object-fit: cover; }
+.oa-av span { color: #fff; font-weight: 900; font-size: 18px; }
+.oa-body { flex: 1; min-width: 0; line-height: 1.4; }
+.oa-body strong { font-size: 13px; display: block; }
+.oa-body span.mono { font-size: 10.5px; color: #ffd700; }
+.oa-body p { margin: 3px 0 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oa-close { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+.oa-close:hover { color: var(--red); }

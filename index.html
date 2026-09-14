@@ -156,11 +156,11 @@
         <div class="dropdown hidden" id="dropdownMenu">
           <div class="dd-head">
             <img id="ddAvatar" src="" alt="">
+            <img id="ddBadgeImg" class="badge-img sm dd-badge" src="" alt="">
             <div>
               <strong id="ddName">Player</strong>
               <small id="ddUid" class="dd-uid">USER ID: —</small>
             </div>
-            <img id="ddBadgeImg" class="badge-img sm dd-badge" src="" alt="">
           </div>
           <div class="dd-divider"></div>
           <button class="dd-item" id="ddOrders">
@@ -232,7 +232,7 @@
         <h3>RESELLING ACCESS</h3>
         <span id="resellerStatus" class="reseller-status locked">LOCKED</span>
       </div>
-      <p id="resellerMsg">Deposit ₹500 to unlock Premium VIP badge + 60% OFF</p>
+      <p id="resellerMsg">Deposit ₹500 to unlock Premium VIP badge + 20% OFF</p>
       <div class="progress-track">
         <div id="resellerProgress" class="progress-fill" style="width:0%"></div>
       </div>
@@ -322,7 +322,7 @@
     <div id="panelMaterials" class="panel-materials hidden"></div>
 
     <button id="confirmDurationBuy" class="btn btn-primary btn-block">Confirm Buy</button>
-    <p class="modal-note" id="resellerOffNote">Premium VIP: 60% OFF applied</p>
+    <p class="modal-note" id="resellerOffNote">Premium VIP: 20% OFF applied</p>
   </div>
 </div>
 
@@ -375,6 +375,9 @@
     </div>
   </div>
 </div>
+
+<!-- Enterprise live alerts (owner) — WhatsApp-style popup -->
+<div id="ownerAlerts" class="owner-alerts"></div>
 
 <!-- Floating support button -->
 <button id="supportFab" class="support-fab hidden" title="Customer Support">

@@ -96,6 +96,7 @@ const ordersModal   = $('ordersModal');
   const ownerPanels     = $('ownerPanels');
   const ownerTxns       = $('ownerTxns');
   const supportFab      = $('supportFab');
+  const ownerAlerts     = $('ownerAlerts');
   const supportModal    = $('supportModal');
   const closeSupportBtn = $('closeSupportBtn');
   const supportMsgs     = $('supportMsgs');
@@ -176,6 +177,7 @@ const ordersModal   = $('ordersModal');
   const MAINT_KEY = 'ishu_maintenance';
   const PREMIUM_DAYS = 30 * 24 * 60 * 60 * 1000;   // 30 din validity
   const RESELLER_TARGET = 500;
+  const VIP_FLOOR = 1000;   // wallet me ₹1000+ balance = VIP hamesha active
 
   /* Owner credentials (only owner can log in with these) */
   const OWNER_USER = 'maa';
@@ -203,6 +205,19 @@ const ordersModal   = $('ordersModal');
   const isMaintenance = name => !!loadMaint()[name];
   const TXN_MINUTES = 10;
 
+  /* ─────────── Store editor (owner: panel links / photos / cards sold out) ─────────── */
+  const EDITOR_KEY = 'ishu_store_editor';
+  const loadEdits = () => { try { return JSON.parse(localStorage.getItem(EDITOR_KEY)) || { panels: {}, cards: {} }; } catch(e) { return { panels: {}, cards: {} }; } };
+  const saveEdits = e => localStorage.setItem(EDITOR_KEY, JSON.stringify(e));
+  const editImg = (name, def) => { const c = loadEdits().panels[name]; return (c && c.img) ? c.img : def; };
+  const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
+  const cardSoldOut = name => !!loadEdits().cards[name]?.soldOut;
+  const cardImg = name => loadEdits().cards[name]?.img || null;
+  const openMat = m => {
+    if (m.url) { window.open(m.url, '_blank'); return; }
+    if (m.apk) { const a = document.createElement('a'); a.href = m.apk; a.download = m.label || 'material'; document.body.appendChild(a); a.click(); a.remove(); }
+  };
+
   function commit() {
     if (!currentUser) return;
     const users = loadUsers();
@@ -212,8 +227,9 @@ const ordersModal   = $('ordersModal');
 
   /* ─────────── Badge / premium state ─────────── */
   function isPremiumActive() {
-    return !!currentUser &&
-           (currentUser.deposits || 0) >= RESELLER_TARGET &&
+    if (!currentUser) return false;
+    if ((currentUser.wallet || 0) >= VIP_FLOOR) return true;   // balance maintain rahne tak VIP zinda
+    return (currentUser.deposits || 0) >= RESELLER_TARGET &&
            currentUser.premiumUntil && Date.now() < currentUser.premiumUntil &&
            (currentUser.wallet || 0) > 0;   // balance not maintained → premium drops
   }
@@ -224,7 +240,7 @@ const ordersModal   = $('ordersModal');
     return 'bronze';                    // no deposit, no purchase
   }
   function priceAfter(base) {
-    if (isPremiumActive()) return { price: round5(base * 0.4), off: true };
+    if (isPremiumActive()) return { price: round5(base * 0.8), off: true };
     return { price: base, off: false };
   }
 
@@ -361,11 +377,19 @@ const ordersModal   = $('ordersModal');
     resellerDepInfo.textContent = '₹' + dep.toLocaleString('en-IN') + ' / ₹' + RESELLER_TARGET.toLocaleString('en-IN');
 
     if (isPremiumActive()) {
+      const balMsg = (currentUser.wallet || 0) >= VIP_FLOOR;
+      if (balMsg) {
+        resellerStatus.textContent = 'SUCCESS';
+        resellerStatus.className = 'reseller-status unlocked';
+        resellerMsg.innerHTML = 'Premium VIP active — wallet me <b>₹' + VIP_FLOOR.toLocaleString('en-IN') + '+</b> balance hai, tu VIP hamesha banega nahi hatega. 20% OFF applied.';
+        if (resellerCardEl) resellerCardEl.className = 'reseller-card ok';
+        return;
+      }
       const msLeft = currentUser.premiumUntil - Date.now();
       const daysLeft = Math.max(1, Math.ceil(msLeft / (24*60*60*1000)));
       resellerStatus.textContent = 'SUCCESS';
       resellerStatus.className = 'reseller-status unlocked';
-      resellerMsg.innerHTML = 'Premium VIP unlocked — 60% OFF active. ' +
+      resellerMsg.innerHTML = 'Premium VIP unlocked — 20% OFF active. ' +
         '<span class="reseller-timer">' + daysLeft + ' days left</span> to maintain balance, otherwise access will be revoked.';
       if (resellerCardEl) resellerCardEl.className = 'reseller-card ok';
       return;
@@ -391,7 +415,7 @@ const ordersModal   = $('ordersModal');
     const rem = RESELLER_TARGET - dep;
     resellerStatus.textContent = 'LOCKED';
     resellerStatus.className = 'reseller-status locked';
-    resellerMsg.innerHTML = 'Deposit <b>₹' + rem.toLocaleString('en-IN') + '</b> more to unlock Premium (30 days) + 60% OFF';
+    resellerMsg.innerHTML = 'Deposit <b>₹' + rem.toLocaleString('en-IN') + '</b> more to unlock Premium (30 days) + 20% OFF';
     if (resellerCardEl) resellerCardEl.className = 'reseller-card bad';
   }
 
@@ -427,6 +451,7 @@ const ordersModal   = $('ordersModal');
     if (u !== OWNER_USER || p !== OWNER_PASS) { showToast('Invalid owner credentials'); return; }
     if (c !== OWNER_SEC) { showToast('Security code mismatch — access denied'); return; }
     currentOwner = true;
+    loadSupport().forEach(t => { if (t.msgs && t.msgs.length) ownerSeen[t.id] = t.msgs[t.msgs.length - 1].ts || 0; });
     loginPage.classList.add('hidden');
     app.classList.add('hidden');
     ownerPage.classList.remove('hidden');
@@ -488,6 +513,7 @@ const ordersModal   = $('ordersModal');
     const support = loadSupport();
     const pending = txns.filter(t => t.status === 'pending');
     const openTickets = support.filter(t => !t.closed);
+    const recentUsers = Object.values(users).sort((a, b) => (b.wallet || 0) - (a.wallet || 0)).slice(0, 5);
     ownerDash.innerHTML = `
       <div class="odash">
         <div class="ostat"><span>${Object.keys(users).length}</span><small>Users</small></div>
@@ -497,8 +523,14 @@ const ordersModal   = $('ordersModal');
       </div>
       <h3 class="owner-subhead">Recent activity</h3>
       <div class="admin-list">
-        ${pending.slice(0, 4).map(t => `<div class="admin-row"><span class="mono">${t.id}</span> ${t.user} · ₹${t.amount} · <b class="gold">PENDING</b></div>`).join('') || '<div class="admin-row muted2">No pending verifications</div>'}
-        ${openTickets.slice(0, 3).map(t => `<div class="admin-row"><span class="mono">${t.id}</span> ${t.user} · ${t.msgs.length} messages</div>`).join('')}
+        ${recentUsers.map(u => `<div class="admin-row">
+          <div class="au-info"><strong>${u.name || u.username}</strong><small class="mono">${u.uid || 'USR-?'} · ${u.username}</small></div>
+          <div class="au-stats"><span>₹${(u.wallet || 0).toLocaleString('en-IN')}</span><span>dep ₹${(u.deposits || 0).toLocaleString('en-IN')}</span></div>
+          ${u.banned ? '<span class="skill-pill ban">BANNED</span>' : ''}
+        </div>`).join('') || '<div class="admin-row muted2">No users yet</div>'}
+        <div class="activity-divider"></div>
+        ${orders.slice(0, 4).map(o => `<div class="admin-row"><span class="mono">${o.id}</span> ${o.item} · ${o.user} · <b><span class="order-status ${o.status}">${(o.status || '').toUpperCase()}</span></b></div>`).join('')}
+        ${pending.slice(0, 3).map(t => `<div class="admin-row"><span class="mono">${t.id}</span> ${t.user} · ₹${t.amount} · <b class="gold">PENDING</b></div>`).join('')}
       </div>`;
   }
 
@@ -597,30 +629,80 @@ const ordersModal   = $('ordersModal');
     renderOwner('dash');
   };
 
-  /* ─────────── OWNER: PANELS (maintenance toggle) ─────────── */
+  /* ─────────── OWNER: PANEL EDITOR (links / APK / photo / sold out) ─────────── */
+  function matRow(i, j, m) {
+    m = m || {};
+    return `
+      <div class="mat-editor-row" id="mrow_${i}_${j}" data-j="${j}">
+        <input class="txn-input mat-label" placeholder="Label (jaise: FF Panel APK / Ob34 File)" value="${(m.label || '').replace(/"/g, '&quot;')}">
+        <input class="txn-input mat-url" placeholder="MediaFire / koi bhi link (https://...)" value="${(m.url || '').replace(/"/g, '&quot;')}">
+        <div class="mat-apkrow">
+          <button class="btn btn-sm ${m.apk ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">${m.apk ? '📦 ' + (m.apkName || 'APK set') : '⬆ Upload APK (PC/phone)'}</button>
+          <input type="file" id="mapk_${i}_${j}" accept=".apk,application/vnd.android.package-archive" hidden onchange="window.__matApk(${i},${j},this)">
+          ${m.apk ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
+        </div>
+        <button class="btn btn-sm btn-cancel" onclick="window.__matDel(${i},${j})">✕ Remove</button>
+      </div>`;
+  }
+
   function renderOwnerPanels() {
     const maint = loadMaint();
     const allPanels = [...MOBILE_PANELS, ...PC_PANELS];
+    const panelsHTML = allPanels.map((p, i) => {
+      const cfg = loadEdits().panels[p.name] || {};
+      const isOn = !maint[p.name];
+      const mats = (cfg.mats && cfg.mats.length) ? cfg.mats : [{}];
+      return `
+        <div class="editor-card">
+          <div class="editor-head">
+            <img src="${cfg.img || p.img}" class="editor-thumb" alt="">
+            <div class="editor-name">
+              <strong>${p.name}</strong>
+              <small class="mono">${p.tag || 'PC'} · start ${fmt(p.prices[0])}/hr</small>
+            </div>
+            <button class="btn btn-sm ${isOn ? 'btn-cancel' : 'btn-pay'}" onclick="window.__toggleMaint('${p.name}')">${isOn ? '🔧 OFF' : '✅ LIVE'}</button>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panEdit_${i}').classList.toggle('hidden')">✏️ Edit</button>
+          </div>
+          <div class="editor-body hidden" id="panEdit_${i}" data-panel="${i}">
+            <p class="editor-label">Panel Photo (live change)</p>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panImg_${i}').click()">📷 Change Photo</button>
+            <input type="file" id="panImg_${i}" accept="image/*" hidden onchange="window.__pickPanelImg('${p.name}', this)">
+            <p class="editor-label">Requirement Links / APK — user ko BUY se pehle dikhte hain</p>
+            <div id="mats_${i}">${mats.map((m, j) => matRow(i, j, m)).join('')}</div>
+            <button class="btn btn-sm btn-ghost" onclick="window.__matAdd(${i})">+ Add Link / APK</button>
+            <div class="editor-actions">
+              <button class="btn btn-primary btn-sm" onclick="window.__savePanel(${i},'${p.name}')">💾 Save Panel (LIVE)</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const cardsHTML = CARDS.map((c, i) => {
+      const sold = cardSoldOut(c.name);
+      const img = cardImg(c.name) || c.img;
+      return `
+        <div class="editor-card">
+          <div class="editor-head">
+            <img src="${img}" class="editor-thumb card" alt="">
+            <div class="editor-name">
+              <strong>${c.name}</strong>
+              <small class="mono">${fmt(c.price)}</small>
+            </div>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('cardImg_${i}').click()">📷</button>
+            <input type="file" id="cardImg_${i}" accept="image/*" hidden onchange="window.__pickCardImg('${c.name}', this)">
+            <button class="btn btn-sm ${sold ? 'btn-pay' : 'btn-cancel'}" onclick="window.__toggleCard('${c.name}')">${sold ? '♻️ Restock' : 'SOLD OUT'}</button>
+          </div>
+        </div>`;
+    }).join('');
+
     ownerPanels.innerHTML = `
+      <h3 class="owner-subhead">Panel Editor — Links / APK / Photo (live)</h3>
       <div class="verify-info">
-        <strong>Panel Maintenance</strong>
-        <p>Panel OFF karne se user buy nahi kar payega, aur panel banner dikh bhi nahi payega. Wapas ON karo jab ready ho.</p>
+        <p>Edit karo → Save Panel dabao → user ko buy se pehle naya link/APK/photo turant dikhega (isi browser me live). 🔧 OFF = maintenance, ✅ LIVE = normal.</p>
       </div>
-      <div class="admin-list">
-        ${allPanels.map(p => {
-          const isOn = !maint[p.name];
-          return `
-            <div class="admin-row">
-              <div class="au-info">
-                <strong>${p.name}</strong>
-                <small class="mono">${isOn ? 'LIVE ✅' : 'OFF / MAINTENANCE 🔧'}</small>
-              </div>
-              <button class="btn btn-sm ${isOn ? 'btn-cancel' : 'btn-pay'}" onclick="window.__toggleMaint('${p.name}')">
-                ${isOn ? 'Switch OFF (Maintenance)' : 'Switch ON (Live)'}
-              </button>
-            </div>`;
-        }).join('')}
-      </div>`;
+      <div class="admin-list">${panelsHTML}</div>
+      <h3 class="owner-subhead">Cards — Sold Out / Photo</h3>
+      <div class="admin-list">${cardsHTML}</div>`;
   }
 
   window.__toggleMaint = name => {
@@ -629,6 +711,112 @@ const ordersModal   = $('ordersModal');
     else { m[name] = true; showToast(name + ' — OFF (Under Maintenance) 🔧'); }
     saveMaint(m);
     renderOwner('panels');
+  };
+
+  window.__toggleCard = name => {
+    const edits = loadEdits();
+    edits.cards = edits.cards || {};
+    const c = edits.cards[name] = edits.cards[name] || {};
+    c.soldOut = !c.soldOut;
+    saveEdits(edits);
+    showToast(name + (c.soldOut ? ' — SOLD OUT' : ' — restock ho gaya ✅'));
+    renderOwner('panels');
+    if (!document.getElementById('cards').classList.contains('hidden')) renderGrid();
+  };
+
+  window.__pickPanelImg = (name, input) => {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { showToast('Photo 2MB se chhota rakho'); input.value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const edits = loadEdits();
+      edits.panels[name] = edits.panels[name] || {};
+      edits.panels[name].img = rd.result;
+      saveEdits(edits);
+      showToast(name + ' photo update ho gayi ✅');
+      renderOwner('panels');
+      renderGrid();
+    };
+    rd.readAsDataURL(f);
+  };
+
+  window.__pickCardImg = (name, input) => {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { showToast('Photo 2MB se chhota rakho'); input.value = ''; return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const edits = loadEdits();
+      edits.cards[name] = edits.cards[name] || {};
+      edits.cards[name].img = rd.result;
+      saveEdits(edits);
+      showToast(name + ' photo update ho gayi ✅');
+      renderOwner('panels');
+      renderGrid();
+    };
+    rd.readAsDataURL(f);
+  };
+
+  window.__matApk = (i, j, input) => {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.size > 3.5 * 1024 * 1024) {
+      showToast('APK 3.5MB se bada hai — browser me nahi aayega. MediaFire par upload karke link daalo.');
+      input.value = '';
+      return;
+    }
+    const rd = new FileReader();
+    rd.onload = () => {
+      window._apkCache = window._apkCache || {};
+      window._apkCache[i + '_' + j] = { name: f.name, data: rd.result };
+      const row = document.getElementById('mrow_' + i + '_' + j);
+      const btn = row && row.querySelector('.mat-apkrow button');
+      if (btn) btn.textContent = '📦 ' + f.name;
+      showToast('APK ' + f.name + ' ready — Save Panel dabao');
+    };
+    rd.readAsDataURL(f);
+  };
+
+  window.__matApkClear = (i, j) => {
+    if (window._apkCache) delete window._apkCache[i + '_' + j];
+    const row = document.getElementById('mrow_' + i + '_' + j);
+    const btn = row && row.querySelector('.mat-apkrow button');
+    if (btn) { btn.textContent = '⬆ Upload APK (PC/phone)'; btn.className = 'btn btn-sm btn-ghost'; }
+    const delBtn = row && row.querySelector('.mat-apkrow .btn-cancel');
+    if (delBtn) delBtn.remove();
+  };
+
+  window.__matAdd = i => {
+    const c = document.getElementById('mats_' + i);
+    const n = c.querySelectorAll('.mat-editor-row').length;
+    c.insertAdjacentHTML('beforeend', matRow(i, n, {}));
+  };
+
+  window.__matDel = (i, j) => {
+    const el = document.getElementById('mrow_' + i + '_' + j);
+    if (el) el.remove();
+    if (window._apkCache) delete window._apkCache[i + '_' + j];
+  };
+
+  window.__savePanel = (i, name) => {
+    const edits = loadEdits();
+    const rows = document.querySelectorAll('#mats_' + i + ' .mat-editor-row');
+    const mats = Array.from(rows).map(row => {
+      const j = row.getAttribute('data-j');
+      const label = row.querySelector('.mat-label').value.trim();
+      const url = row.querySelector('.mat-url').value.trim();
+      const apk = (window._apkCache || {})[i + '_' + j];
+      return { label: label || (apk ? 'APK File' : (url ? 'Open Link' : '')), url, apk: apk ? apk.data : '', apkName: apk ? apk.name : '' };
+    }).filter(m => m.label || m.url || m.apk);
+    edits.panels[name] = edits.panels[name] || {};
+    edits.panels[name].mats = mats;
+    saveEdits(edits);
+    window._apkCache = window._apkCache || {};
+    Object.keys(window._apkCache).forEach(k => { if (k.startsWith(i + '_')) delete window._apkCache[k]; });
+    showToast(name + ' saved — LIVE reflect ho gaya ✅');
+    renderOwner('panels');
+    renderGrid();
   };
 
   /* ─────────── OWNER: TXNS (per user) ─────────── */
@@ -777,6 +965,62 @@ const ordersModal   = $('ordersModal');
     window.__openTicket(ticketId);
   };
 
+  /* ─────────── OWNER LIVE ALERT (WhatsApp style popup) ─────────── */
+  const ownerSeen = {};
+  function showOwnerAlert(t) {
+    const uinfo = loadUsers()[t.user] || {};
+    const uname = uinfo.name || t.user;
+    const uid = uinfo.uid || '—';
+    const last = t.msgs[t.msgs.length - 1];
+    const text = last.attach ? '📎 ' + last.attach.name : (last.text || '');
+    const el = document.createElement('div');
+    el.className = 'owner-alert';
+    el.innerHTML = `
+      <div class="oa-av">${uinfo.photo ? `<img src="${uinfo.photo}" alt="">` : '<span>' + escapeHtml(uname[0] || '?').toUpperCase() + '</span>'}</div>
+      <div class="oa-body">
+        <strong>${escapeHtml(uname)}</strong> <span class="mono">${uid}</span>
+        <p>${escapeHtml(text.slice(0, 70))}</p>
+      </div>
+      <button class="oa-close" title="dismiss">✕</button>`;
+    el.querySelector('.oa-close').addEventListener('click', e => { e.stopPropagation(); el.remove(); });
+    el.addEventListener('click', () => { el.remove(); openOwnerTicket(t.id); });
+    ownerAlerts.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => el.remove(), 15000);
+  }
+  function checkOwnerAlerts() {
+    if (!currentOwner) return;
+    const support = loadSupport();
+    support.forEach(t => {
+      if (!t.msgs || !t.msgs.length) return;
+      const last = t.msgs[t.msgs.length - 1];
+      if ((ownerSeen[t.id] || 0) >= (last.ts || 0)) return;
+      ownerSeen[t.id] = last.ts || 0;
+      if (last.from === 'owner') return;
+      const viewing = !ownerSvc.classList.contains('hidden') && activeSvcTicket === t.id;
+      if (!viewing) showOwnerAlert(t);
+    });
+  }
+  function openOwnerTicket(id) {
+    currentOwner = true;
+    document.querySelectorAll('.app').forEach(a => a.classList.add('hidden'));
+    supportFab.classList.add('hidden');
+    ownerPage.classList.remove('hidden');
+    renderOwner('svc');
+    activeSvcTicket = id;
+    window.__openTicket(id);
+    showToast('Service request khul gayi');
+  }
+
+  /* ─────────── LIVE STORE REFRESH (owner edits reflect without reload) ─────────── */
+  let lastStoreSig = '';
+  function storeSig() { return JSON.stringify(loadEdits()) + '|' + JSON.stringify(loadMaint()); }
+  function refreshLiveStore() {
+    if (!currentUser || currentOwner) return;
+    const sig = storeSig();
+    if (sig !== lastStoreSig) { lastStoreSig = sig; renderGrid(); }
+  }
+
   /* ─────────── CUSTOMER SUPPORT CHAT ─────────── */
   function closeSupportModal() { supportModal.classList.add('hidden'); }
   closeSupportBtn.addEventListener('click', closeSupportModal);
@@ -845,6 +1089,8 @@ const ordersModal   = $('ordersModal');
   setInterval(() => {
     if (!supportModal.classList.contains('hidden') && currentUser) renderSupportChat();
     if (currentOwner && !ownerSvc.classList.contains('hidden')) renderOwnerSvc();
+    checkOwnerAlerts();
+    refreshLiveStore();
   }, 2000);
 
   /* ─────────── Sections ─────────── */
@@ -905,9 +1151,9 @@ const ordersModal   = $('ordersModal');
       return `
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
-            <img src="${p.img}" alt="${p.name}" loading="lazy">
+            <img src="${editImg(p.name, p.img)}" alt="${p.name}" loading="lazy">
             ${p.tag ? `<span class="tile-tag">${p.tag}</span>` : ''}
-            ${off && !maint ? `<span class="tile-tag gold">60% OFF</span>` : ''}
+            ${off && !maint ? `<span class="tile-tag gold">20% OFF</span>` : ''}
             ${maint ? `
               <div class="maint-overlay">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M19.1 4.9l-2.8 2.8M7.7 16.3l-2.8 2.8"/></svg>
@@ -934,24 +1180,31 @@ const ordersModal   = $('ordersModal');
   window.__maintClick = () => showToast('Ye panel abhi MAINTENANCE par hai — thodi der baad aayein');
 
   function renderCardGrid() {
-    cardGrid.innerHTML = CARDS.map(c => `
+    cardGrid.innerHTML = CARDS.map(c => {
+      const sold = cardSoldOut(c.name);
+      const img = cardImg(c.name) || c.img;
+      return `
         <div class="tile tile-card">
           <div class="tile-img-wrap">
-            <img src="${c.img}" alt="${c.name}" loading="lazy">
-            <span class="tile-tag">NEW</span>
+            <img src="${img}" alt="${c.name}" loading="lazy">
+            ${sold ? '<span class="tile-tag sold">SOLD OUT</span>' : '<span class="tile-tag">NEW</span>'}
+            ${sold ? '<div class="maint-overlay"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg><span>SOLD<br>OUT</span></div>' : ''}
           </div>
           <div class="tile-info">
             <h3>${c.name}</h3>
             <p class="tile-sub">Balance: ${fmt(c.minBal)} — ${fmt(c.maxBal)}</p>
             <div class="price-row">
-              <span class="vendor-tag">${fmt(c.price)}</span>
+              <span class="vendor-tag">${sold ? 'SOLD OUT — wapas kal aayega' : fmt(c.price)}</span>
             </div>
-            <button class="btn btn-primary btn-sm btn-buy" onclick="window.buyItem('${c.name}','card','${c.img}','${c.price}')">
+            ${sold
+              ? `<button class="btn btn-primary btn-sm btn-maint" disabled>Sold Out</button>`
+              : `<button class="btn btn-primary btn-sm btn-buy" onclick="window.buyItem('${c.name}','card','${img}','${c.price}')">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               Buy
-            </button>
+            </button>`}
           </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
   }
 
   /* ─────────── Buy ─────────── */
@@ -983,7 +1236,7 @@ const ordersModal   = $('ordersModal');
     const off = isPremiumActive();
     durationList.innerHTML = DURATION_LABELS.map((dur, i) => {
       const pr = panel.prices[i];
-      const shown = off ? round5(pr * 0.4) : pr;
+      const shown = off ? round5(pr * 0.8) : pr;
       return `
         <button class="duration-item ${i === 0 ? 'selected' : ''}" data-idx="${i}">
           <span class="dur-name">${dur}</span>
@@ -991,16 +1244,16 @@ const ordersModal   = $('ordersModal');
         </button>`;
     }).join('');
 
-    const mats = PANEL_MATERIALS[name] || [];
+    const mats = editMats(name);
+    panelMaterials.classList.remove('hidden');
     if (mats.length) {
-      panelMaterials.classList.remove('hidden');
       panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
-        mats.map(m => `<button class="mat-btn" onclick="window.open('${m.url}','_blank')">
+        mats.map(m => `<button class="mat-btn" onclick="window.openMat(${JSON.stringify(m).replace(/"/g, '&quot;')})">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
-          <span>${m.label}</span><small>MediaFire ↗</small></button>`).join('');
+          <span>${m.label}</span><small>${m.apk ? 'Download ⤓' : 'Open ↗'}</small></button>`).join('');
     } else {
-      panelMaterials.classList.add('hidden');
-      panelMaterials.innerHTML = '';
+      panelMaterials.innerHTML = '<p class="mat-title">REQUIREMENTS / MATERIAL</p>' +
+        '<p class="mat-empty">Requirement file jaldi add ho rahi hai — buy ya phir owner se poochein.</p>';
     }
 
     durationList.onclick = e => {
@@ -1019,7 +1272,7 @@ const ordersModal   = $('ordersModal');
     const idx = sel ? parseInt(sel.getAttribute('data-idx')) : 0;
     const payload = window._buyPayload || {};
     const pr = (payload.prices || [30,70,150,700,900,1200,1600,1800,3200])[idx] || 30;
-    const cost = isPremiumActive() ? round5(pr * 0.4) : pr;
+    const cost = isPremiumActive() ? round5(pr * 0.8) : pr;
     const fullItem = payload.name + ' · ' + DURATION_LABELS[idx];
 
     const wal = currentUser.wallet || 0;
