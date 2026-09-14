@@ -103,6 +103,9 @@ const ordersModal   = $('ordersModal');
   const supportMsgInput = $('supportMsg');
   const supportFile     = $('supportFile');
   const supportSend     = $('supportSend');
+  const videoModal      = $('videoModal');
+  const closeVideoBtn   = $('closeVideoBtn');
+  const videoPlayer     = $('videoPlayer');
 
   const ddUid = $('ddUid');
   let currentOwner = false;
@@ -213,6 +216,7 @@ const ordersModal   = $('ordersModal');
   const saveEdits = e => localStorage.setItem(EDITOR_KEY, JSON.stringify(e));
   const editImg = (name, def) => { const c = loadEdits().panels[name]; return (c && c.img) ? c.img : def; };
   const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
+  const panelVideo = name => { const c = (loadEdits().panels || {})[name] || {}; return (c.videoUrl || c.videoId) ? { url: c.videoUrl, id: c.videoId, name: c.videoName || '' } : null; };
   const cardSoldOut = name => !!loadEdits().cards[name]?.soldOut;
   const cardImg = name => loadEdits().cards[name]?.img || null;
 
@@ -707,6 +711,13 @@ const ordersModal   = $('ordersModal');
             <p class="editor-label">Panel Photo (live change)</p>
             <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panImg_${i}').click()">📷 Change Photo</button>
             <input type="file" id="panImg_${i}" accept="image/*" hidden onchange="window.__pickPanelImg('${p.name}', this)">
+            <p class="editor-label">Panel Video — demo tile pe play button dikhega (auto play nahi hoga)</p>
+            <div class="mat-iconrow">
+              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panVid_${i}').click()">${(cfg.videoId || cfg.videoUrl) ? '🎬 Video set' : '⬆ Upload Video (mp4/webm)'}</button>
+              <input type="file" id="panVid_${i}" accept="video/*" hidden onchange="window.__pickPanelVideo('${p.name}', this)">
+              <input class="txn-input mat-icon-url" placeholder="Ya video URL (YouTube / direct link)" value="${(cfg.videoUrl || '').replace(/"/g, '&quot;')}" onchange="window.__setPanelVideoUrl('${p.name}', this.value)">
+              ${(cfg.videoId || cfg.videoUrl) ? `<button class="btn btn-sm btn-cancel" onclick="window.__clearPanelVideo('${p.name}')">✕ video</button>` : ''}
+            </div>
             <p class="editor-label">Requirement Links / APK — user ko BUY se pehle dikhte hain</p>
             <div id="mats_${i}">${mats.map((m, j) => matRow(i, j, m)).join('')}</div>
             <button class="btn btn-sm btn-ghost" onclick="window.__matAdd(${i})">+ Add Link / APK</button>
@@ -781,7 +792,7 @@ const ordersModal   = $('ordersModal');
     rd.readAsDataURL(f);
   };
 
-  window.__pickCardImg = (name, input) => {
+window.__pickCardImg = (name, input) => {
     const f = input.files[0];
     if (!f) return;
     if (f.size > 2 * 1024 * 1024) { showToast('Photo 2MB se chhota rakho'); input.value = ''; return; }
@@ -796,6 +807,72 @@ const ordersModal   = $('ordersModal');
       renderGrid();
     };
     rd.readAsDataURL(f);
+  };
+
+  window.__pickPanelVideo = (name, input) => {
+    const f = input.files[0];
+    if (!f) return;
+    showToast('Video upload ho raha hai — big file bhi chalega (IndexedDB)...');
+    const vid = 'vid_' + Date.now().toString(36) + '_' + name;
+    filePut(vid, f).then(() => {
+      const edits = loadEdits();
+      edits.panels[name] = edits.panels[name] || {};
+      if (edits.panels[name].videoId) fileDel(edits.panels[name].videoId).catch(()=>{});
+      edits.panels[name].videoId = vid;
+      edits.panels[name].videoName = f.name;
+      delete edits.panels[name].videoUrl;
+      saveEdits(edits);
+      showToast('Video uploaded ✅ — tile pe play button aa gaya');
+      renderOwner('panels');
+      renderGrid();
+    }).catch(() => showToast('Video upload failed — try again'));
+    input.value = '';
+  };
+
+  window.__setPanelVideoUrl = (name, url) => {
+    const edits = loadEdits();
+    edits.panels[name] = edits.panels[name] || {};
+    url = (url || '').trim();
+    if (url) {
+      if (edits.panels[name].videoId) fileDel(edits.panels[name].videoId).catch(()=>{});
+      edits.panels[name].videoUrl = url;
+      delete edits.panels[name].videoId;
+      delete edits.panels[name].videoName;
+    } else {
+      delete edits.panels[name].videoUrl;
+    }
+    saveEdits(edits);
+    renderOwner('panels');
+    renderGrid();
+  };
+
+  window.__clearPanelVideo = name => {
+    const edits = loadEdits();
+    const c = edits.panels[name] || {};
+    if (c.videoId) fileDel(c.videoId).catch(()=>{});
+    delete c.videoId; delete c.videoName; delete c.videoUrl;
+    saveEdits(edits);
+    renderOwner('panels');
+    renderGrid();
+    showToast('Video hata diya');
+  };
+
+  window.__playPanelVideo = async name => {
+    const vid = panelVideo(name);
+    if (!vid) { showToast('Is panel me koi video nahi hai'); return; }
+    videoModal.classList.remove('hidden');
+    videoPlayer.removeAttribute('src');
+    if (vid.url) {
+      videoPlayer.src = vid.url;
+    } else if (vid.id) {
+      try {
+        const blob = await fileGet(vid.id);
+        if (!blob) { showToast('Video file nahi mili'); videoModal.classList.add('hidden'); return; }
+        videoPlayer.src = URL.createObjectURL(blob);
+      } catch(e) { showToast('Video load failed'); videoModal.classList.add('hidden'); return; }
+    }
+videoPlayer.load();
+    /* AUTO PLAY NAHI — user ko khud play dabana hai */
   };
 
   window.__matApk = (i, j, input) => {
@@ -1243,12 +1320,16 @@ const ordersModal   = $('ordersModal');
       const { price, off } = priceAfter(base1h);
       const maint = isMaintenance(p.name);
       const matsT = editMats(p.name);
+      const panelVid = panelVideo(p.name);
       window._tileMats = window._tileMats || {};
       window._tileMats[p.name] = matsT;
       return `
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
             <img src="${editImg(p.name, p.img)}" alt="${p.name}" loading="lazy">
+            ${panelVid && !maint ? `<button class="tile-play" title="Panel demo dekho" onclick="event.stopPropagation(); window.__playPanelVideo('${p.name.replace(/'/g, "\\'")}')">
+              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>` : ''}
             ${p.tag ? `<span class="tile-tag">${p.tag}</span>` : ''}
             ${off && !maint ? `<span class="tile-tag gold">20% OFF</span>` : ''}
             ${maint ? `
@@ -1584,7 +1665,7 @@ const ordersModal   = $('ordersModal');
           ${pending ? (sent
             ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification</div>`
             : `
-            <div class="txn-timerbar">
+            <div class="txn-timerbar" data-txn="${t.id}">
               <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
               <span class="timer-txt">⏱ Time left — ${timeStr}</span>
             </div>
@@ -1662,16 +1743,37 @@ const ordersModal   = $('ordersModal');
     ordersModal.classList.add('hidden');
     txnsModal.classList.add('hidden');
     supportModal.classList.add('hidden');
+    videoModal.classList.add('hidden');
+    if (videoPlayer && !videoPlayer.paused) videoPlayer.pause();
   }
   closeDurationBtn.addEventListener('click', closeAllModals);
   closeDepositBtn.addEventListener('click', closeAllModals);
   closeOrdersBtn.addEventListener('click', closeAllModals);
   closeTxnsBtn.addEventListener('click', closeAllModals);
+  closeSupportBtn.addEventListener('click', closeAllModals);
+  closeVideoBtn.addEventListener('click', closeAllModals);
 
-  /* Live countdown for pending transactions (10 min auto-fail) */
+  /* Live countdown for pending transactions (10 min auto-fail) — only timer text, NO full re-render so typed UTR/screenshot stay safe */
   setInterval(() => {
     if (!currentUser || txnsModal.classList.contains('hidden')) return;
-    renderTxns();
+    const all = loadTxns();
+    const now = Date.now();
+    let expired = false;
+    all.forEach(t => {
+      if (t.status === 'pending' && !t.received && now > t.expiresAt) { t.status = 'failed'; expired = true; }
+    });
+    if (expired) { saveTxns(all); renderTxns(); return; }
+    all.filter(t => t.status === 'pending' && !t.received).forEach(t => {
+      const el = txnsList.querySelector('[data-txn="' + t.id + '"]');
+      if (!el) return;
+      const left = Math.max(0, t.expiresAt - now);
+      const mins = Math.floor(left / 60000);
+      const secs = Math.floor((left % 60000) / 1000);
+      const fill = el.querySelector('.bar-fill');
+      const txt = el.querySelector('.timer-txt');
+      if (fill) fill.style.width = Math.max(0, (left / (TXN_MINUTES * 60 * 1000)) * 100) + '%';
+      if (txt) txt.textContent = '⏱ Time left — ' + mins + ':' + String(secs).padStart(2, '0');
+    });
   }, 1000);
 
   /* ─────────── Init ─────────── */
