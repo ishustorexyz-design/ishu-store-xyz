@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const pcBadgeImg     = $('pcBadgeImg');
   const pcCam          = $('pcCam');
   const dpFile         = $('dpFile');
-  const pcBadgeBtn     = $('pcBadgeBtn');
   const pcBadgeLink    = $('pcBadgeLink');
   const ddBadge        = $('ddBadge');
   const ddPhoto        = $('ddPhoto');
@@ -628,12 +627,12 @@ const ordersModal   = $('ordersModal');
   navBadgeImg.addEventListener('click', e => { e.stopPropagation(); openBadgeModal(); });
   ddBadgeImg.addEventListener('click', e => { e.stopPropagation(); openBadgeModal(); });
   ddBadge.addEventListener('click', () => { dropdownMenu.classList.add('hidden'); openBadgeModal(); });
-  if (pcBadgeBtn) pcBadgeBtn.addEventListener('click', openBadgeModal);
   if (pcBadgeLink) pcBadgeLink.addEventListener('click', openBadgeModal);
 
   /* ─────────── Profile photo (DP) change ─────────── */
   function pickDp() { dpFile.click(); }
   if (pcCam) pcCam.addEventListener('click', e => { e.stopPropagation(); pickDp(); });
+  if (pcAvatar) pcAvatar.addEventListener('dblclick', e => { e.stopPropagation(); pickDp(); });
   ddPhoto.addEventListener('click', () => { dropdownMenu.classList.add('hidden'); pickDp(); });
   dpFile.addEventListener('change', () => {
     const f = dpFile.files && dpFile.files[0];
@@ -1354,6 +1353,8 @@ videoPlayer.load();
     localStorage.setItem(ACTIVE_TICKET_KEY, tid);
     ticketFormPanel.classList.add('hidden');
     ticketChatPanel.classList.remove('hidden');
+    const inputRow = ticketChatPanel.querySelector('.support-input-row');
+    if (inputRow) inputRow.style.display = '';
     if (tickUserUnsub) tickUserUnsub();
     const docRef = ticketDoc(tid);
     const msgUnsub = ticketMsgs(tid).orderBy('timestamp', 'asc').onSnapshot(snap => {
@@ -1367,9 +1368,18 @@ videoPlayer.load();
         if (tickUserUnsub) tickUserUnsub();
         activeTicketId = '';
         localStorage.removeItem(ACTIVE_TICKET_KEY);
-        ticketChatPanel.classList.add('hidden');
-        ticketFormPanel.classList.remove('hidden');
-        showToast('Ticket closed by owner — new ticket banao');
+        ticketBarId.textContent = tid;
+        ticketBarStatus.textContent = 'RESOLVED';
+        ticketBarStatus.className = 'ticket-status st-resolved';
+        if (inputRow) inputRow.style.display = 'none';
+        supportMsgs.innerHTML =
+          '<div class="resolve-banner">' +
+          '<div class="rb-ico">✅</div>' +
+          '<strong>Ticket Resolved</strong>' +
+          '<p>Owner has successfully resolved your ticket.<br>Thank you for your recharge &amp; support!</p>' +
+          '<small>Ab aap naya ticket bana sakte ho.</small>' +
+          '</div>';
+        showToast('Ticket ' + tid + ' resolved by owner ✓');
         return;
       }
       const t = d.data(); if (!t) return;
@@ -1526,7 +1536,7 @@ function newTicketReset() {
       actsEl.innerHTML = t.status === 'RESOLVED'
         ? `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','OPEN')">↺ Reopen</button>`
         : `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','IN_PROGRESS')">⏳ In-Progress</button>
-           <button class="btn btn-sm btn-verify" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved — Close & Delete</button>`;
+           <button class="btn btn-sm btn-resolve" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved — Close & Delete</button>`;
     });
     ownerMsgUnsub = ticketMsgs(rid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];

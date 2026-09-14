@@ -130,11 +130,11 @@ body::before {
 
 .login-box {
   background: rgba(20,28,48,.85);
-  border: 1px solid var(--border);
+  border: 1.5px solid rgba(255,215,0,.4);
   border-radius: 24px;
   padding: 30px 32px 36px;
   backdrop-filter: blur(18px);
-  box-shadow: 0 0 0 1px rgba(255,106,0,.12), var(--shadow);
+  box-shadow: 0 0 0 1px rgba(255,106,0,.12), 0 0 26px rgba(255,215,0,.08), var(--shadow);
   position: relative;
   overflow: hidden;
 }
@@ -196,7 +196,7 @@ body::before {
   width: 100%;
   padding: 15px 18px;
   border-radius: 14px;
-  border: 1px solid var(--border);
+  border: 1.5px solid rgba(255,215,0,.35);
   background: var(--card2);
   color: var(--text);
   font-size: 16px;
@@ -208,7 +208,7 @@ body::before {
 .login-input::placeholder { color: var(--muted); }
 .login-input:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(0,229,255,.12);
+  box-shadow: 0 0 0 3px rgba(0,229,255,.12), 0 0 18px rgba(0,229,255,.2);
   transform: translateY(-1px);
 }
 
@@ -507,20 +507,30 @@ body::before {
   place-items: center;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(0,0,0,.5);
-  transition: transform .2s;
+  transition: transform .2s, opacity .2s;
+  opacity: 0;
+  z-index: 3;
 }
+.pc-av-wrap:hover .pc-cam,
+.pc-av-wrap .pc-cam:focus-visible { opacity: 1; }
+@media (hover: none) { .pc-cam { opacity: 1; } }
 .pc-cam:hover { transform: scale(1.12); }
 .pc-cam .icon { width: 15px; height: 15px; }
-.pc-badge-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: transform .2s;
+.badge-chip {
+  position: absolute;
+  bottom: -3px;
+  left: -3px;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  background: rgba(10,12,19,.9);
+  border: 2px solid #ffd700;
+  border-radius: 50%;
+  padding: 2px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
+  z-index: 4;
+  pointer-events: none;
 }
-.pc-badge-btn:hover { transform: scale(1.08) rotate(4deg); }
 .pc-badge-link {
   background: rgba(255,215,0,.08);
   border: 1px dashed rgba(255,215,0,.4);
@@ -1006,6 +1016,23 @@ body::before {
   border: 1px solid rgba(0,229,255,.5);
 }
 .btn-verify:hover { background: rgba(0,229,255,.25); }
+.btn-resolve {
+  background: rgba(46,204,113,.14);
+  color: #2ecc71;
+  border: 1px solid rgba(46,204,113,.6);
+}
+.btn-resolve:hover { background: rgba(46,204,113,.28); box-shadow: 0 0 16px rgba(46,204,113,.35); }
+.resolve-banner {
+  text-align: center;
+  padding: 26px 16px;
+  border: 1px dashed rgba(46,204,113,.5);
+  border-radius: 14px;
+  background: rgba(46,204,113,.08);
+}
+.resolve-banner .rb-ico { font-size: 34px; margin-bottom: 6px; }
+.resolve-banner strong { color: #2ecc71; font-size: 16px; letter-spacing: .5px; display: block; }
+.resolve-banner p { color: var(--text); font-size: 13.5px; margin: 10px 0 6px; line-height: 1.5; }
+.resolve-banner small { color: var(--muted); font-size: 12px; }
 .btn-pay {
   background: rgba(0,230,118,.14);
   color: var(--green);
@@ -1199,8 +1226,8 @@ body::before {
   .dropdown { right: 4px; width: 232px; }
   .support-fab { right: 12px; bottom: 14px; padding: 10px 14px; font-size: 12px; }
   .empty-state { font-size: 13px; }
-  .pc-avatar .badge-img { width: 46px; height: 46px; }
   .pc-av-wrap, .pc-av-wrap .avatar-main { width: 68px; height: 68px; }
+  .badge-chip { width: 22px; height: 22px; }
   .pc-cam { width: 26px; height: 26px; }
   .chat-av { width: 30px; height: 30px; }
   .msg-meta { font-size: 9.5px !important; }
