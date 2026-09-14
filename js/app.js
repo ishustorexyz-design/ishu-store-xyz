@@ -40,6 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const statPurchases = $('statPurchases');
   const openDepositBtn = $('openDepositBtn');
   const openOrdersBtn  = $('openOrdersBtn');
+  const pcAvatar       = $('pcAvatar');
+  const pcBadgeImg     = $('pcBadgeImg');
+  const pcCam          = $('pcCam');
+  const dpFile         = $('dpFile');
+  const pcBadgeBtn     = $('pcBadgeBtn');
+  const pcBadgeLink    = $('pcBadgeLink');
+  const ddBadge        = $('ddBadge');
+  const ddPhoto        = $('ddPhoto');
+  const badgeModal     = $('badgeModal');
+  const closeBadgeBtn  = $('closeBadgeBtn');
+  const badgeList      = $('badgeList');
 
   const resellerStrip   = $('resellerStrip');
   const resellerStatus  = $('resellerStatus');
@@ -135,8 +146,17 @@ const ordersModal   = $('ordersModal');
 
   const BADGE = {
     bronze:  'assets/img/badges/bronze.png',
+    silver:  'assets/img/badges/silver.svg',
     vip:     'assets/img/badges/vip.png',
     premium: 'assets/img/badges/premium.png'
+  };
+  const BADGE_RANK = ['bronze', 'silver', 'vip', 'premium'];
+  const BADGE_NAME = { bronze: 'BRONZE', silver: 'SILVER', vip: 'VIP', premium: 'PREMIUM VIP' };
+  const BADGE_HOW = {
+    bronze:  'Sabhi ko free — login karte hi milta hai',
+    silver:  'Sabhi ko free — koi bhi user equip kar sakta hai',
+    vip:     'Ek bhi deposit ya purchase karo — VIP unlock',
+    premium: '₹500 deposit (30 days) + wallet ₹1000 balance = Premium'
   };
 
   const DURATION_LABELS = ['1 Hour','12 Hours','1 Day','7 Days','10 Days','15 Days','25 Days','30 Days','Permanent'];
@@ -271,12 +291,26 @@ const ordersModal   = $('ordersModal');
            currentUser.premiumUntil && Date.now() < currentUser.premiumUntil &&
            (currentUser.wallet || 0) > 0;   // balance not maintained → premium drops
   }
-  function currentBadge() {
+  function badgeUnlocked(b) {
+    if (!currentUser) return false;
+    if (b === 'bronze' || b === 'silver') return true;          // free for everyone
+    if (b === 'vip') return (currentUser.deposits || 0) > 0 || (currentUser.purchases || 0) > 0 || isPremiumActive();
+    if (b === 'premium') return isPremiumActive();
+    return false;
+  }
+  function autoBadge() {
     if (isPremiumActive()) return 'premium';
     const hasAny = (currentUser.deposits || 0) > 0 || (currentUser.purchases || 0) > 0;
-    if (hasAny) return 'vip';           // beech wala badge = VIP
-    return 'bronze';                    // no deposit, no purchase
+    if (hasAny) return 'vip';
+    return 'silver';
   }
+  function shownBadge() {
+    if (!currentUser) return 'bronze';
+    const eq = currentUser.badge;
+    if (eq && BADGE_RANK.includes(eq) && badgeUnlocked(eq)) return eq;
+    return autoBadge();
+  }
+  function currentBadge() { return shownBadge(); }
   function priceAfter(base) {
     if (isPremiumActive()) return { price: round5(base * 0.8), off: true };
     return { price: base, off: false };
@@ -380,6 +414,7 @@ const ordersModal   = $('ordersModal');
     const photo = currentUser.photo || '';
 
     [navAvatar, ddAvatar].forEach(a => { if (a) a.src = photo || 'assets/img/logo/login-logo.png'; });
+    if (pcAvatar) pcAvatar.src = photo || 'assets/img/logo/login-logo.png';
     profileName.textContent = name;
     if (pcUid) pcUid.textContent = currentUser.uid || '—';
     ddName.textContent = name;
@@ -390,6 +425,8 @@ const ordersModal   = $('ordersModal');
     if (ddBadgeImg) { ddBadgeImg.src = bImg; ddBadgeImg.classList.remove('hidden'); }
     navBadgeImg.src = bImg;
     navBadgeImg.classList.remove('hidden');
+    if (pcBadgeImg) pcBadgeImg.src = bImg;
+    if (pcBadgeLink) pcBadgeLink.textContent = '🏅 ' + (BADGE_NAME[badge] || 'VIP');
 
     updateBalances();
     renderReseller();
@@ -467,6 +504,57 @@ const ordersModal   = $('ordersModal');
   });
   ddOrders.addEventListener('click', () => { dropdownMenu.classList.add('hidden'); openOrders(); });
   ddLogout.addEventListener('click', logout);
+
+  /* ─────────── Badge / VIP modal ─────────── */
+  function openBadgeModal() {
+    if (!currentUser) { showToast('Login first'); return; }
+    badgeList.innerHTML = BADGE_RANK.map(b => {
+      const unlock = badgeUnlocked(b);
+      const eq = shownBadge() === b;
+      const img = BADGE[b];
+      const cls = (unlock ? '' : 'locked ') + (eq ? 'equipped ' : '') + (b === 'premium' ? 'bc-premium ' : '');
+      return `<div class="badge-card ${cls}">
+        <img class="bc-img" src="${img}" alt="${BADGE_NAME[b]}">
+        <h4>${BADGE_NAME[b]}</h4>
+        <p>${BADGE_HOW[b]}</p>
+        <button class="bc-btn" ${unlock ? '' : 'disabled'} onclick="window.__equipBadge('${b}')">${eq ? '✓ EQUIPPED' : (unlock ? 'Equip' : '🔒 Locked')}</button>
+      </div>`;
+    }).join('');
+    badgeModal.classList.remove('hidden');
+  }
+  window.__equipBadge = b => {
+    if (!currentUser || !BADGE_RANK.includes(b)) return;
+    if (!badgeUnlocked(b)) { showToast('Ye badge abhi locked hai — pehle unlock karo'); return; }
+    currentUser.badge = b;
+    commit();
+    renderProfile();
+    openBadgeModal();
+    showToast(BADGE_NAME[b] + ' badge equipped ✓');
+  };
+  closeBadgeBtn.addEventListener('click', () => badgeModal.classList.add('hidden'));
+  badgeModal.addEventListener('click', e => { if (e.target === badgeModal) badgeModal.classList.add('hidden'); });
+  navBadgeImg.addEventListener('click', e => { e.stopPropagation(); openBadgeModal(); });
+  ddBadgeImg.addEventListener('click', e => { e.stopPropagation(); openBadgeModal(); });
+  ddBadge.addEventListener('click', () => { dropdownMenu.classList.add('hidden'); openBadgeModal(); });
+  if (pcBadgeBtn) pcBadgeBtn.addEventListener('click', openBadgeModal);
+  if (pcBadgeLink) pcBadgeLink.addEventListener('click', openBadgeModal);
+
+  /* ─────────── Profile photo (DP) change ─────────── */
+  function pickDp() { dpFile.click(); }
+  if (pcCam) pcCam.addEventListener('click', e => { e.stopPropagation(); pickDp(); });
+  ddPhoto.addEventListener('click', () => { dropdownMenu.classList.add('hidden'); pickDp(); });
+  dpFile.addEventListener('change', () => {
+    const f = dpFile.files && dpFile.files[0];
+    if (!f) return;
+    compressIcon(f, url => {
+      if (!currentUser) return;
+      currentUser.photo = url;
+      commit();
+      renderProfile();
+      showToast('Profile photo update ho gayi ✓');
+      dpFile.value = '';
+    });
+  });
 
   function logout() {
     currentUser = null;
@@ -1104,11 +1192,17 @@ videoPlayer.load();
     ownerSvc.innerHTML = support.map(t => {
       const last = t.msgs[t.msgs.length - 1];
       const lastText = last?.attach ? '📎 ' + last.attach.name : (last?.text || '');
+      const ui = loadUsers()[t.user] || {};
+      const uname = ui.name || t.user;
+      const av = ui.photo ? `<img class="chat-av" src="${ui.photo}" alt="">` : `<div class="chat-av chat-av-txt">${escapeHtml((uname || 'U')[0]).toUpperCase()}</div>`;
       return `
       <div class="admin-row col svc-row" onclick="window.__openTicket('${t.id}')" style="cursor:pointer">
-        <div class="au-info">
-          <strong>${t.user}</strong>
-          <small>${t.msgs.length} messages · ${new Date(t.msgs[0].ts).toLocaleString()}</small>
+        <div class="svc-row-head">
+          ${av}
+          <div class="au-info">
+            <strong>${uname}</strong>
+            <small class="mono">${ui.uid || '—'} · ${t.user}</small>
+          </div>
         </div>
         <div class="svc-preview">${lastText.slice(0, 80)}</div>
         ${!t.closed ? '<span class="gold" style="font-size:11px">Click to open →</span>' : '<div class="muted2">Closed</div>'}
@@ -1128,13 +1222,12 @@ videoPlayer.load();
       <div class="svc-thread">
         <button class="btn btn-sm btn-ghost" onclick="activeSvcTicket=null;renderOwnerSvc()" style="margin-bottom:10px">← Back to list</button>
         <div class="svc-user-label">Chat with <strong>${uname}</strong> · <span class="mono">${uid}</span> (${t.msgs.length} messages)</div>
-        <div class="svc-thread-msgs" id="svcThreadMsgs">
-          ${t.msgs.map(m => m.from === 'owner'
-            ? `<div class="msg owner-msg"><div class="bubble">${escapeHtml(m.text)}</div>${m.attach ? '<div class="att">📎 ' + m.attach.name + '</div>' : ''}<small>OWNER (ADMIN) · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`
-            : `<div class="msg user-msg"><div class="bubble">${escapeHtml(m.text)}</div>${m.attach ? '<div class="att">📎 ' + m.attach.name + '</div>' : ''}<small>${uname} · ${uid} · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`
-          ).join('')}
-        </div>
+        <div class="svc-thread-msgs" id="svcThreadMsgs"></div>
         <div class="svc-reply-row">
+          <label class="chat-attach">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+            <input type="file" id="svcReplyFile" accept="image/*,video/*,.pdf,.rar,.zip" hidden>
+          </label>
           <input id="svcReplyInput" class="chat-input" type="text" placeholder="Type a reply..." maxlength="500">
           <button class="chat-send" onclick="window.__sendOwnerReply('${t.id}')">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
@@ -1142,7 +1235,25 @@ videoPlayer.load();
         </div>
       </div>`;
     const msgsEl = document.getElementById('svcThreadMsgs');
-    if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+    const render = async () => {
+      const html = [];
+      for (const m of t.msgs) html.push(await msgHtml(m, t.user));
+      msgsEl.innerHTML = html.join('');
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    };
+    render();
+    const rfile = document.getElementById('svcReplyFile');
+    if (rfile) rfile.addEventListener('change', async () => {
+      const file = rfile.files[0];
+      rfile.value = '';
+      if (!file) return;
+      const key = 'supo_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+      try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
+      t.msgs.push({ from: 'owner', text: '', ts: Date.now(), attach: { name: file.name, type: file.type, size: file.size, key } });
+      saveSupport(loadSupport());
+      window.__openTicket(ticketId);
+      showToast('Reply + file delivered');
+    });
   };
 
   window.__sendOwnerReply = ticketId => {
@@ -1216,6 +1327,7 @@ videoPlayer.load();
 
   /* ─────────── CUSTOMER SUPPORT CHAT ─────────── */
   function closeSupportModal() { supportModal.classList.add('hidden'); }
+
   closeSupportBtn.addEventListener('click', closeSupportModal);
 
   supportFab.addEventListener('click', () => {
@@ -1235,15 +1347,80 @@ videoPlayer.load();
     return t;
   }
 
-  function renderSupportChat() {
+  const supObjUrls = {};
+  function fmtSize(n) { n = n || 0; return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? (n / 1024).toFixed(0) + ' KB' : n + ' B'; }
+
+  async function attachHtml(m, mine) {
+    if (!m.attach) return '';
+    const a = m.attach;
+    if (!a.key) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
+    const old = supObjUrls[a.key];
+    if (old) URL.revokeObjectURL(old);
+    try {
+      const blob = await fileGet(a.key);
+      if (!blob) return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
+      const url = URL.createObjectURL(blob);
+      supObjUrls[a.key] = url;
+      const cls = mine ? 'att-mine' : 'att-theirs';
+      if (a.type && a.type.startsWith('image/')) return `<img class="att-preview" src="${url}" alt="${escapeHtml(a.name)}">`;
+      if (a.type && a.type.startsWith('video/')) return `<video class="att-video" src="${url}" controls preload="metadata"></video>`;
+      return `<a class="att-file-link ${cls}" href="${url}" download="${escapeHtml(a.name)}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> ${escapeHtml(a.name)} (${fmtSize(a.size)}) — Download</a>`;
+    } catch (e) {
+      return `<div class="att">📎 ${escapeHtml(a.name)}</div>`;
+    }
+  }
+
+  function userAvatar(username) {
+    const u = loadUsers()[username] || {};
+    if (u.photo) return `<img class="chat-av" src="${u.photo}" alt="">`;
+    const ch = escapeHtml((u.name || username || 'U')[0]).toUpperCase();
+    return `<div class="chat-av chat-av-txt">${ch}</div>`;
+  }
+
+  function msgMeta(uinfo, m) {
+    const uname = escapeHtml(uinfo.name || uinfo.username || 'User');
+    const uid = escapeHtml(uinfo.uid || '—');
+    const t = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div class="msg-meta"><span class="mn">${uname}</span> · <span class="mid">${uid}</span> · ${t}</div>`;
+  }
+
+  async function msgHtml(m, ticketUser) {
+    if (m.from === 'owner') {
+      const t = await attachHtml(m, false);
+      return `<div class="msg owner-msg">
+        <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
+        <div class="msg-c">
+          <div class="bubble">${escapeHtml(m.text) || ''}${t}</div>
+          <div class="msg-meta"><span class="mn">OWNER (ADMIN)</span> · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>`;
+    }
+    const uname = ticketUser || m.user || currentUser.username || 'User';
+    const uinfo = loadUsers()[uname] || { name: uname };
+    const t = await attachHtml(m, true);
+    return `<div class="msg user-msg">
+      <div class="msg-c">
+        <div class="bubble">${escapeHtml(m.text) || ''}${t}</div>
+        ${msgMeta(uinfo, m)}
+      </div>
+      ${userAvatar(uname)}
+    </div>`;
+  }
+
+  async function renderSupportChat() {
     const t = myTicket();
-    const uname = currentUser.name || currentUser.username;
-    const uid = currentUser.uid || '—';
     if (t.msgs.length) {
-      supportMsgs.innerHTML = t.msgs.map(m => m.from === 'owner'
-        ? `<div class="msg owner-msg"><div class="bubble">${escapeHtml(m.text)}</div>${m.attach && m.attach.name ? `<div class="att">📎 ${m.attach.name}</div>` : ''}<small>OWNER (ADMIN) · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`
-        : `<div class="msg user-msg"><div class="bubble">${escapeHtml(m.text)}</div>${m.attach && m.attach.name ? `<div class="att">📎 ${m.attach.name}${m.attach.type.startsWith('image/') ? '' : ''}</div>` : ''}<small>${uname} · ${uid} · ${new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`
-      ).join('');
+      const html = [];
+      for (const m of t.msgs) html.push(await msgHtml(m, currentUser.username));
+      supportMsgs.innerHTML = html.join('');
+    } else {
+      supportMsgs.innerHTML = `
+        <div class="msg owner-msg">
+          <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
+          <div class="msg-c">
+            <div class="bubble">Hi! 👋 How can we help you? Send your payment screenshot, video or UTR here.</div>
+          </div>
+        </div>`;
     }
     supportMsgs.scrollTop = supportMsgs.scrollHeight;
   }
@@ -1256,15 +1433,18 @@ videoPlayer.load();
 
   supportSend.addEventListener('click', sendSupportMsg);
   supportMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendSupportMsg(); });
-  supportFile.addEventListener('change', () => {
+  supportFile.addEventListener('change', async () => {
     const file = supportFile.files[0];
+    supportFile.value = '';
     if (!file) return;
+    const key = 'sup_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+    try { await filePut(key, file); } catch (e) { showToast('File save failed'); return; }
     const support = loadSupport();
     const t = myTicket();
-    t.msgs.push({ from: 'user', text: '', ts: Date.now(), attach: { name: file.name, type: file.type, size: file.size } });
+    t.msgs.push({ from: 'user', text: '', ts: Date.now(), user: currentUser.username, attach: { name: file.name, type: file.type, size: file.size, key } });
     saveSupport(support);
     renderSupportChat();
-    showToast('Attachment sent — owner can view name/size. Full files later via backend');
+    showToast('File sent — owner dekh paayega ✓');
   });
 
   function sendSupportMsg() {
@@ -1272,11 +1452,19 @@ videoPlayer.load();
     if (!text) return;
     const support = loadSupport();
     const t = myTicket();
-    t.msgs.push({ from: 'user', text, ts: Date.now() });
+    t.msgs.push({ from: 'user', text, ts: Date.now(), user: currentUser.username });
     supportMsgInput.value = '';
     saveSupport(support);
     renderSupportChat();
   }
+
+  /* Zero-delay: storage event fires the instant localStorage changes (owner ↔ user, same browser tabs) */
+  window.addEventListener('storage', e => {
+    if (e.key === SUPPORT_KEY) {
+      if (currentUser && !supportModal.classList.contains('hidden')) renderSupportChat();
+      if (currentOwner) checkOwnerAlerts();
+    }
+  });
 
   /* Live refresh: owner replies appear instantly (same browser). Real zero-delay across devices needs a backend/host. */
   setInterval(() => {

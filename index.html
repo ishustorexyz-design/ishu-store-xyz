@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 
@@ -164,6 +164,14 @@
             </div>
           </div>
           <div class="dd-divider"></div>
+          <button class="dd-item" id="ddBadge">
+            <img src="assets/img/badges/bronze.png" alt="" class="dd-item-ico"> Badge / VIP
+          </button>
+          <button class="dd-item" id="ddPhoto">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+            Change Photo
+          </button>
+          <div class="dd-divider"></div>
           <button class="dd-item" id="ddOrders">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
             My Orders
@@ -202,11 +210,24 @@
   <!-- Profile / Member Bar -->
   <section class="profile-strip">
     <div class="profile-card">
+      <div class="pc-avatar">
+        <div class="pc-av-wrap">
+          <img id="pcAvatar" class="avatar-main" src="" alt="Your Photo">
+          <button class="pc-cam" id="pcCam" title="Change photo">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
+          </button>
+          <input type="file" id="dpFile" accept="image/*" hidden>
+        </div>
+        <button class="pc-badge-btn" id="pcBadgeBtn" title="Badge / VIP status">
+          <img id="pcBadgeImg" class="badge-img" src="" alt="Badge">
+        </button>
+      </div>
       <div class="pc-info">
         <p class="pc-greet">WELCOME BACK</p>
         <h3 id="profileName">Player</h3>
         <div class="pc-idrow">
           <span class="pc-id-chip">USER ID: <b id="pcUid">—</b></span>
+          <button class="pc-badge-link" id="pcBadgeLink">🏅 Badge / VIP</button>
         </div>
       </div>
       <div class="pc-stats">
@@ -347,6 +368,23 @@
   </div>
 </div>
 
+<!-- ═══════════ BADGE MODAL (tap badge → equip + VIP info) ═══════════ -->
+<div id="badgeModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="closeBadgeBtn">✕</button>
+    <h3>🏅 Badges & VIP</h3>
+    <p class="modal-sub">Apna badge chuno — jo band hai wo lock hai, VIP kaise milega niche dekho</p>
+    <div id="badgeList" class="badge-list"></div>
+    <div class="vip-how">
+      <h4>⭐ VIP badge kaise milega?</h4>
+      <p>• <b>BRONZE</b> — sabhi ko free</p>
+      <p>• <b>SILVER</b> — sabhi ko free</p>
+      <p>• <b>VIP</b> — ek bhi deposit ya purchase karo (₹500 deposit = 30 days Premium + 20% OFF)</p>
+      <p>• <b>PREMIUM</b> — reseller: ₹500 deposit + wallet ₹1000 balance maintain</p>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ SUPPORT CHAT MODAL ═══════════ -->
 <div id="videoModal" class="modal hidden">
   <div class="modal-card modal-wide">
@@ -376,7 +414,7 @@
     <div class="support-input-row">
       <label class="chat-attach">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
-        <input type="file" id="supportFile" accept="image/*,video/*" hidden>
+        <input type="file" id="supportFile" accept="image/*,video/*,application/pdf,application/zip,.rar,.zip,.pdf" hidden>
       </label>
       <input id="supportMsg" class="chat-input" type="text" placeholder="Type a message..." maxlength="500">
       <button id="supportSend" class="chat-send">
@@ -400,6 +438,6 @@
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
