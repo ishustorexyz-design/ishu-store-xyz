@@ -293,6 +293,61 @@ const ordersModal   = $('ordersModal');
     throw new Error('Invalid response from freeimage.host');
   }
 
+  async function uploadFirebaseStorage(file, onProg) {
+    if (!window.firebase) throw new Error('Firebase SDK not available');
+    let st = null;
+    try {
+      if (fb.storage) {
+        st = fb.storage;
+      } else if (firebase.storage) {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(window.FIREBASE_CONFIG);
+        }
+        st = firebase.storage();
+        fb.storage = st;
+      }
+    } catch(e) {
+      console.warn('Storage instance error:', e);
+    }
+    if (!st) throw new Error('Firebase Storage not initialized');
+
+    const cleanName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = 'uploads/' + Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + cleanName;
+    const ref = st.ref(path);
+    const task = ref.put(file, { contentType: file.type || 'application/octet-stream' });
+
+    return new Promise((resolve, reject) => {
+      task.on('state_changed',
+        snap => {
+          if (typeof onProg === 'function' && snap.totalBytes > 0) {
+            onProg(snap.bytesTransferred, snap.totalBytes);
+          }
+        },
+        err => reject(err),
+        async () => {
+          try {
+            const url = await task.snapshot.ref.getDownloadURL();
+            resolve(url);
+          } catch(e) {
+            reject(e);
+          }
+        }
+      );
+    });
+  }
+
+  async function uploadCatbox(file, onProg) {
+    const fd = new FormData();
+    fd.append('reqtype', 'fileupload');
+    fd.append('time', '72h');
+    fd.append('fileToUpload', file);
+    const res = await uploadViaXhr('https://litterbox.catbox.moe/resources/internals/api.php', fd, onProg);
+    if (typeof res === 'string' && res.startsWith('http')) {
+      return res.trim();
+    }
+    throw new Error('Catbox upload failed');
+  }
+
   async function uploadTmpFiles(file, onProg) {
     const fd = new FormData();
     fd.append('file', file);
@@ -307,41 +362,48 @@ const ordersModal   = $('ordersModal');
     if (!file) throw new Error('No file provided');
     const isImg = (file.type || '').startsWith('image/');
 
-    // Tier 1: Dedicated Image Host for Photos
+    // Tier 1: Firebase Cloud Storage (Direct high-speed streaming on iOS/Android/PC)
+    try {
+      return await uploadFirebaseStorage(file, onProg);
+    } catch (fbErr) {
+      console.warn('Firebase Storage upload failed, attempting fallback providers:', fbErr);
+    }
+
+    // Tier 2: Freeimage for Photos
     if (isImg) {
       try {
         return await uploadImageFreeImage(file, onProg);
-      } catch (err1) {
-        console.warn('Freeimage primary upload failed, attempting fallback to tmpfiles:', err1);
-        try {
-          return await uploadTmpFiles(file, onProg);
-        } catch (err2) {
-          console.warn('Tmpfiles upload failed, checking Base64 fallback:', err2);
-          if (file.size <= 2 * 1048576) {
-            return await fileToDataUrl(file, onProg);
-          }
-          throw err2;
-        }
+      } catch (imgErr) {
+        console.warn('Freeimage upload failed:', imgErr);
       }
     }
 
-    // Tier 2: Universal File Host for Videos, PDFs, ZIPs, RARs
+    // Tier 3: Catbox / Litterbox CDN
+    try {
+      return await uploadCatbox(file, onProg);
+    } catch (catErr) {
+      console.warn('Catbox upload failed:', catErr);
+    }
+
+    // Tier 4: Tmpfiles
     try {
       return await uploadTmpFiles(file, onProg);
-    } catch (err1) {
-      console.warn('Tmpfiles video/file upload failed:', err1);
-      if (file.size <= 2 * 1048576) {
-        return await fileToDataUrl(file, onProg);
-      }
-      throw err1;
+    } catch (tmpErr) {
+      console.warn('Tmpfiles upload failed:', tmpErr);
     }
+
+    // Tier 5: Local Base64 fallback (for small files)
+    if (file.size <= 5 * 1048576) {
+      return await fileToDataUrl(file, onProg);
+    }
+    throw new Error('Upload failed across all providers — check file size or network');
   }
 
   const fbUpload = (path, blob, onProg) => universalUpload(blob, onProg);
   /* ─────────── FIRESTORE CLOUD BACKEND (Cross-device realtime sync) ───────────
      Synchronizes users, store edits, maintenance state, transactions, and orders
      instantly across PC and mobile phones via Firestore snapshot listeners. */
-  const fb = { ok: false, fs: null, applying: false };
+  const fb = { ok: false, fs: null, storage: null, applying: false };
 
   function fbInit() {
     if (!window.firebase || !window.FIREBASE_CONFIG) return;
@@ -353,8 +415,15 @@ const ordersModal   = $('ordersModal');
         app = firebase.initializeApp(window.FIREBASE_CONFIG);
       }
       fb.fs = firebase.firestore(app);
+      if (firebase.storage) {
+        try {
+          fb.storage = firebase.storage(app);
+        } catch(stErr) {
+          console.warn('[Firebase Storage] init warn:', stErr);
+        }
+      }
       fb.ok = true;
-      console.log('[Firestore] connected');
+      console.log('[Firestore & Storage] connected');
 
       // 1. Live Users Listener (Cross-device Account Mirror)
       fb.fs.collection('users').onSnapshot(snap => {
@@ -1329,15 +1398,49 @@ window.__pickCardImg = (name, input) => {
     window.open(link, '_blank');
   };
 
-  function getYouTubeEmbedUrl(url) {
-    if (!url) return '';
-    const str = url.trim();
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
-    const match = str.match(regExp);
-    if (match && match[2].length === 11) {
-      return 'https://www.youtube.com/embed/' + match[2] + '?autoplay=1&rel=0';
+  function getVideoEmbedInfo(url) {
+    if (!url) return { type: 'none', src: '' };
+    let str = url.trim();
+
+    // YouTube regex (youtu.be, watch?v=, embed, shorts, mobile)
+    const ytMatch = str.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|live\/|watch\?.+&v=))([\w-]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      return {
+        type: 'iframe',
+        src: 'https://www.youtube-nocookie.com/embed/' + ytMatch[1] + '?autoplay=1&rel=0&playsinline=1&modestbranding=1'
+      };
     }
-    return '';
+
+    // Google Drive
+    const gdriveMatch = str.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/i);
+    if (gdriveMatch && gdriveMatch[1]) {
+      return {
+        type: 'iframe',
+        src: 'https://drive.google.com/file/d/' + gdriveMatch[1] + '/preview'
+      };
+    }
+
+    // Streamable
+    const streamableMatch = str.match(/streamable\.com\/([\w-]+)/i);
+    if (streamableMatch && streamableMatch[1]) {
+      return {
+        type: 'iframe',
+        src: 'https://streamable.com/e/' + streamableMatch[1] + '?autoplay=1'
+      };
+    }
+
+    // Dropbox direct streaming
+    if (str.includes('dropbox.com')) {
+      str = str.replace(/[?&]dl=0/, '').replace(/[?&]raw=1/, '') + (str.includes('?') ? '&raw=1' : '?raw=1');
+      return { type: 'video', src: str };
+    }
+
+    // Tmpfiles link normalization
+    if (str.includes('tmpfiles.org/') && !str.includes('tmpfiles.org/dl/')) {
+      str = str.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+    }
+
+    return { type: 'video', src: str };
   }
 
   window.__playPanelVideo = async name => {
@@ -1349,15 +1452,17 @@ window.__pickCardImg = (name, input) => {
     if (videoModalTitle) videoModalTitle.textContent = name + ' — Demo Video';
     videoModal.classList.remove('hidden');
 
-    const ytEmbed = getYouTubeEmbedUrl(vid.url || '');
-    if (ytEmbed) {
+    const embed = getVideoEmbedInfo(vid.url || '');
+
+    if (embed.type === 'iframe') {
       if (videoPlayer) {
+        try { videoPlayer.pause(); } catch(e){}
         videoPlayer.classList.add('hidden');
         videoPlayer.removeAttribute('src');
       }
       if (videoIframe) {
         videoIframe.classList.remove('hidden');
-        videoIframe.src = ytEmbed;
+        videoIframe.src = embed.src;
       }
       return;
     }
@@ -1366,12 +1471,22 @@ window.__pickCardImg = (name, input) => {
       videoIframe.classList.add('hidden');
       videoIframe.src = '';
     }
+
     if (videoPlayer) {
       videoPlayer.classList.remove('hidden');
-      videoPlayer.removeAttribute('src');
-      if (vid.url) {
-        videoPlayer.src = vid.url;
+      videoPlayer.setAttribute('playsinline', '');
+      videoPlayer.setAttribute('webkit-playsinline', '');
+      videoPlayer.controls = true;
+
+      if (embed.type === 'video' && embed.src) {
+        videoPlayer.src = embed.src;
         videoPlayer.load();
+        const p = videoPlayer.play();
+        if (p !== undefined) {
+          p.catch(err => {
+            console.log('Video autoplay prevented (user can tap play button):', err);
+          });
+        }
       } else if (vid.id) {
         try {
           const blob = await fileGet(vid.id);
@@ -1382,6 +1497,7 @@ window.__pickCardImg = (name, input) => {
           }
           videoPlayer.src = URL.createObjectURL(blob);
           videoPlayer.load();
+          videoPlayer.play().catch(() => {});
         } catch(e) {
           showToast('Video load failed');
           videoModal.classList.add('hidden');
