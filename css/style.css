@@ -1106,6 +1106,8 @@ body::before {
   .pc-tags, .pc-actions { justify-content: center; }
   .pc-stats { justify-content: center; }
   .store-name.sm { display: inline-flex !important; font-size: 16.5px; letter-spacing: 1.5px; }
+}
+
 /* ---------- OWNER LOGIN (login page) ---------- */
 .owner-login-toggle {
   display: block; width: 100%; margin-top: 18px; padding: 12px;
