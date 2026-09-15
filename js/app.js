@@ -2846,12 +2846,15 @@ setInterval(refreshLiveStore, 2000);
       else if (idx === 7) durParam = '30d';
       else if (idx === 8) durParam = 'permanent';
 
-      const uniqueUser = (currentUser.username + '_' + Date.now().toString(36)).slice(0, 30);
+      const genUsername = (currentUser.username.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'user') + '_' + Math.floor(1000 + Math.random() * 9000);
+      const genPassword = 'pc_' + Math.random().toString(36).substring(2, 8);
+
       const reqBody = {
         key: 'ISHU_fina-Klv1-U4cv-mYUT-714O-Dl5Y-4ABo-ICeF',
         appid: 'APP-1LHEK3',
-        username: uniqueUser,
-        type: 'license',
+        username: genUsername,
+        password: genPassword,
+        type: 'user',
         duration: durParam
       };
       if (untilParam) reqBody.until = untilParam;
@@ -2865,7 +2868,7 @@ setInterval(refreshLiveStore, 2000);
       .then(data => {
         confirmDurationBuy.disabled = false;
         confirmDurationBuy.textContent = 'Confirm Buy';
-        if (data && data.ok && data.license_key) {
+        if (data && data.ok) {
           currentUser.wallet = wal - cost;
           currentUser.purchases = (currentUser.purchases || 0) + 1;
           saveOrder({
@@ -2875,7 +2878,9 @@ setInterval(refreshLiveStore, 2000);
             price: cost,
             img: payload.img,
             status: 'success',
-            details: data.license_key,
+            panelUser: genUsername,
+            panelPass: genPassword,
+            details: `User: ${genUsername} | Pass: ${genPassword}`,
             expires: data.expires || '',
             charged: cost
           });
@@ -2883,7 +2888,7 @@ setInterval(refreshLiveStore, 2000);
           renderProfile();
           closeAllModals();
           openOrders();
-          showToast('🎉 PC Panel Key Generated! Orders me check karein');
+          showToast('🎉 PC Login Credentials Ready! Orders me check karein');
         } else {
           // Fallback: place pending order if server busy
           currentUser.wallet = wal - cost;
@@ -2962,13 +2967,23 @@ setInterval(refreshLiveStore, 2000);
           </div>
           ${st === 'accepted' ? '<div class="order-note">✅ Order accept ho gaya — admin jaldi bhejega</div>' : ''}
           ${o.details ? `
-            <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
-                <b>${o.type === 'panel' ? '🔑 ' + (o.isPc ? 'PC PANEL KEY' : 'PANEL KEY') : 'CARD DETAILS'}:</b>
-                <span class="mono" style="background:rgba(0,0,0,0.4); padding:3px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.details}</span>
-                ${o.expires ? `<small style="display:block; color:#9da6be; margin-top:2px;">Expires: ${o.expires}</small>` : ''}
+                <b>${o.type === 'panel' ? (o.isPc ? '💻 PC LOGIN CREDENTIALS:' : '🔑 PANEL KEY:') : 'CARD DETAILS:'}</b>
+                ${o.panelUser && o.panelPass ? `
+                  <div style="margin-top:4px; font-size:12.5px;">
+                    <div>User: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.panelUser}</span></div>
+                    <div style="margin-top:2px;">Pass: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.panelPass}</span></div>
+                  </div>
+                ` : `<span class="mono" style="background:rgba(0,0,0,0.4); padding:3px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.details}</span>`}
+                ${o.expires ? `<small style="display:block; color:#9da6be; margin-top:3px;">Expires: ${o.expires}</small>` : ''}
               </div>
-              <button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="navigator.clipboard.writeText('${o.details}').then(() => showToast('Key copied to clipboard ✅'))">📋 Copy Key</button>
+              <div style="display:flex; gap:5px;">
+                ${o.panelUser && o.panelPass ? `
+                  <button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="navigator.clipboard.writeText('${o.panelUser}').then(() => showToast('Username copied ✅'))">📋 User</button>
+                  <button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="navigator.clipboard.writeText('${o.panelPass}').then(() => showToast('Password copied ✅'))">📋 Pass</button>
+                ` : `<button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="navigator.clipboard.writeText('${o.details}').then(() => showToast('Copied ✅'))">📋 Copy</button>`}
+              </div>
             </div>` : ''}
           ${st === 'refunded' ? `<div class="order-note red">❌ Reject${o.reason ? ' — ' + o.reason : ''} — amount wallet me refund ho gaya</div>` : ''}
         </div>`;
