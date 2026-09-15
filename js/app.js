@@ -875,10 +875,11 @@ const ordersModal   = $('ordersModal');
     }
   }
 
-  window.handleGoogleCredentialResponse = function(resp) {
-    if (!resp || !resp.credential) return;
-    const data = parseJwt(resp.credential);
-    if (!data) { showToast('Google sign-in failed'); return; }
+  function processGoogleUserData(data) {
+    if (!data || !data.email) {
+      showToast('Google sign-in failed');
+      return;
+    }
 
     const email = (data.email || '').toLowerCase();
     const displayName = data.name || email.split('@')[0] || 'Google User';
@@ -921,36 +922,72 @@ const ordersModal   = $('ordersModal');
     localStorage.setItem(SESSION_USER_KEY, currentUser.username.toLowerCase());
     showToast(`Signed in as ${u.name || u.username} ✓`);
     enterStore();
+  }
+
+  window.handleGoogleCredentialResponse = function(resp) {
+    if (!resp || !resp.credential) return;
+    const data = parseJwt(resp.credential);
+    if (!data) { showToast('Google sign-in failed'); return; }
+    processGoogleUserData(data);
   };
 
+  let googleTokenClient = null;
+
   function initGoogleAuth() {
-    if (!window.google?.accounts?.id) {
-      setTimeout(initGoogleAuth, 250);
+    if (!window.google?.accounts?.oauth2) {
+      setTimeout(initGoogleAuth, 200);
       return;
     }
     try {
-      window.google.accounts.id.initialize({
+      googleTokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
-        callback: window.handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
+        scope: 'email profile openid',
+        callback: async (resp) => {
+          if (resp.error) {
+            console.warn('Google auth error:', resp);
+            return;
+          }
+          if (!resp.access_token) return;
+          try {
+            const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${resp.access_token}` }
+            });
+            const data = await res.json();
+            processGoogleUserData(data);
+          } catch(err) {
+            console.error('Error fetching Google profile:', err);
+            showToast('Google profile fetch failed');
+          }
+        }
       });
-      const gBtn = document.getElementById('googleButton');
-      if (gBtn) {
-        gBtn.innerHTML = '';
-        window.google.accounts.id.renderButton(gBtn, {
-          theme: 'outline',
-          size: 'large',
-          width: '100%',
-          text: 'signin_with',
-          shape: 'pill'
-        });
-      }
     } catch(err) {
-      console.warn('Google Auth Init error:', err);
+      console.warn('Google OAuth init error:', err);
     }
   }
   initGoogleAuth();
+
+  const customGoogleBtn = document.getElementById('customGoogleBtn');
+  if (customGoogleBtn) {
+    customGoogleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (googleTokenClient) {
+        googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+      } else {
+        showToast('Connecting to Google...');
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          attempts++;
+          if (googleTokenClient) {
+            clearInterval(checkInterval);
+            googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+          } else if (attempts > 15) {
+            clearInterval(checkInterval);
+            showToast('Google Sign-In failed to load. Please refresh.');
+          }
+        }, 200);
+      }
+    });
+  }
 
   /* ─────────── Enter store ─────────── */
   function enterStore() {

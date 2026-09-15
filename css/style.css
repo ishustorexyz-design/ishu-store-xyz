@@ -208,7 +208,50 @@ body::before {
   box-shadow: 0 6px 16px rgba(255,106,0,.3);
 }
 
-.google-btn-wrap { display: flex; justify-content: center; min-height: 56px; align-items: center; }
+.custom-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  margin-top: 4px;
+  margin-bottom: 4px;
+  user-select: none;
+}
+.custom-google-btn:hover {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 215, 0, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 106, 0, 0.22);
+}
+.custom-google-btn:active {
+  transform: translateY(0);
+}
+.custom-google-btn .google-svg-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+.custom-google-btn .google-btn-text {
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
 
 .divider {
   display: flex; align-items: center; gap: 12px;
