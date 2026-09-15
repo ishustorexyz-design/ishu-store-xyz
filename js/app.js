@@ -1475,7 +1475,29 @@ videoPlayer.load();
     ownerTxns.innerHTML = `
       <div class="txn-user-select">
         <label>USER chuno — sirf usi ke transactions dikhenge</label>
-        <select id  async function renderOwnerVerify() {
+        <select id="txnUserSelect">
+          ${names.map(n => `<option value="${n}" ${n === ownerTxnUser ? 'selected' : ''}>${n} (${(users[n].uid || '?')})</option>`).join('') || '<option>No users</option>'}
+        </select>
+      </div>
+      <div class="admin-list">
+        ${list.map(t => `
+          <div class="admin-row">
+            <div class="au-info">
+              <strong class="mono">${t.id}</strong>
+              <small>${t.type} · ${new Date(t.createdAt).toLocaleString()}</small>
+            </div>
+            <div class="au-stats">
+              <span>₹${t.amount}</span>
+              <span class="${t.status === 'paid' ? 'green' : (t.status === 'pending' ? 'gold' : 'red')}">${String(t.status).toUpperCase()}</span>
+            </div>
+          </div>`).join('') || '<div class="empty-state">Is user ka koi transaction nahi</div>'}
+      </div>`;
+    const sel = document.getElementById('txnUserSelect');
+    if (sel) sel.addEventListener('change', e => { ownerTxnUser = e.target.value; renderOwnerTxns(); });
+  }
+
+  /* ─────────── OWNER: VERIFY (manual) ─────────── */
+  async function renderOwnerVerify() {
     const txns = loadTxns().filter(t => t.status === 'pending').sort((a, b) => Number(b.received || false) - Number(a.received || false) || a.createdAt - b.createdAt);
     const info = `<div class="verify-info">
       <strong>Payment Verification Center</strong>
