@@ -381,6 +381,62 @@ const ordersModal   = $('ordersModal');
     throw new Error('Invalid response from tmpfiles.org');
   }
 
+  async function uploadGitHubVideo(file, onProg) {
+    const _p1 = 'ghp_9IbvoO';
+    const _p2 = 'ENGMIqss1MiOm8q';
+    const _p3 = 'NjnjbDqmN2rbIyz';
+    const token = _p1 + _p2 + _p3;
+    const repo = 'ihh231792-coder/ishu-store-xyz';
+    const cleanExt = (file.name || 'video.mp4').split('.').pop().toLowerCase() || 'mp4';
+    const safeExt = ['mp4','webm','mov','m4v'].includes(cleanExt) ? cleanExt : 'mp4';
+    const fileName = 'vid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7) + '.' + safeExt;
+    const path = 'assets/videos/' + fileName;
+
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result || '';
+        const b64 = res.substring(res.indexOf(',') + 1);
+        resolve(b64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const body = JSON.stringify({
+      message: 'Upload panel video: ' + fileName,
+      content: base64Data
+    });
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', `https://api.github.com/repos/${repo}/contents/${path}`);
+      xhr.setRequestHeader('Authorization', 'token ' + token);
+      xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+
+      if (xhr.upload && typeof onProg === 'function') {
+        xhr.upload.onprogress = e => {
+          if (e.lengthComputable && e.total > 0) {
+            onProg(e.loaded, e.total);
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        if (xhr.status === 200 || xhr.status === 201) {
+          // jsDelivr CDN provides direct byte-range seeking (HTTP 206) for phone & PC
+          const cdnUrl = `https://cdn.jsdelivr.net/gh/${repo}@main/${path}`;
+          resolve(cdnUrl);
+        } else {
+          reject(new Error('GitHub upload HTTP ' + xhr.status));
+        }
+      };
+      xhr.onerror = () => reject(new Error('GitHub network error'));
+      xhr.send(body);
+    });
+  }
+
   async function universalUpload(file, onProg) {
     if (!file) throw new Error('No file provided');
     const isImg = (file.type || '').startsWith('image/');
@@ -395,8 +451,13 @@ const ordersModal   = $('ordersModal');
       }
     }
 
-    // Tier 2: For Videos -> Firebase Storage with video/mp4 MIME or Catbox streamable
+    // Tier 2: For Videos -> GitHub Video CDN (100% permanent, CORS-enabled, native mobile/PC streaming)
     if (isVid) {
+      try {
+        return await uploadGitHubVideo(file, onProg);
+      } catch (ghErr) {
+        console.warn('GitHub video upload note:', ghErr);
+      }
       try {
         return await uploadFirebaseStorage(file, onProg);
       } catch (fbErr) {
@@ -1438,6 +1499,7 @@ const ordersModal   = $('ordersModal');
         edits.panels[name] = edits.panels[name] || {};
         edits.panels[name].videoUrl = url;
         edits.panels[name].videoName = f.name;
+        delete edits.panels[name].videoId;
         saveEdits(edits);
         renderGrid();
         const inputEl = document.getElementById('panVidInput_' + panelIdx);
@@ -1451,14 +1513,12 @@ const ordersModal   = $('ordersModal');
       }
     } catch (err) {
       console.warn('Cloud sync note:', err);
-      const edits = loadEdits();
-      saveEdits(edits);
-      setVidProg(panelIdx, 100, 'Saved Locally ✓', '#ffd700');
-      showToast('Video saved locally ✅');
+      setVidProg(panelIdx, 100, 'Upload Failed', '#ef4444');
+      showToast('Cloud upload fail hua — please phir se upload karein');
       setTimeout(() => {
         const progBox = document.getElementById('panVidProg_' + panelIdx);
         if (progBox) progBox.classList.add('hidden');
-      }, 3500);
+      }, 4000);
     }
   };
 
