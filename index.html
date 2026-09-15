@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=28">
+<link rel="stylesheet" href="css/style.css?v=29">
 </head>
 <body>
 
@@ -399,6 +399,16 @@
         <div class="v-spin-icon"></div>
         <span id="videoSpinnerText">Loading video for mobile...</span>
       </div>
+      <div id="videoErrorState" class="video-error-state hidden">
+        <div class="ve-icon">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h4>Video Link Expired / Unavailable</h4>
+        <p id="videoErrorMsg">Ye video link expire ho chuka hai ya direct streaming allow nahi karta.<br>Owner Panel me YouTube link (https://youtube.com/watch?v=...) ya fresh video upload karein.</p>
+        <div class="ve-actions">
+          <a id="veOpenLink" class="btn btn-sm btn-ghost hidden" target="_blank" rel="noopener">Open Link in Browser</a>
+        </div>
+      </div>
       <video id="videoPlayer" class="video-player" controls playsinline webkit-playsinline x5-playsinline preload="auto"></video>
       <iframe id="videoIframe" class="video-player hidden" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     </div>
@@ -488,6 +498,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=36"></script>
+<script src="js/app.js?v=37"></script>
 </body>
 </html>

@@ -1573,7 +1573,11 @@ const ordersModal   = $('ordersModal');
 
     const spinner = $('videoSpinner');
     const spinnerText = $('videoSpinnerText');
+    const errBox = $('videoErrorState');
+    const errLink = $('veOpenLink');
+
     const showSpin = (txt) => {
+      if (errBox) errBox.classList.add('hidden');
       if (spinner) {
         spinner.classList.remove('hidden');
         if (spinnerText) spinnerText.textContent = txt || 'Loading video...';
@@ -1582,6 +1586,27 @@ const ordersModal   = $('ordersModal');
     const hideSpin = () => {
       if (spinner) spinner.classList.add('hidden');
     };
+    const showError = (url) => {
+      hideSpin();
+      if (videoPlayer) {
+        try { videoPlayer.pause(); } catch(e){}
+        videoPlayer.classList.add('hidden');
+        videoPlayer.removeAttribute('src');
+      }
+      if (errBox) {
+        errBox.classList.remove('hidden');
+        if (errLink) {
+          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            errLink.href = url;
+            errLink.classList.remove('hidden');
+          } else {
+            errLink.classList.add('hidden');
+          }
+        }
+      }
+    };
+
+    if (errBox) errBox.classList.add('hidden');
 
     const embed = vid.url ? getVideoEmbedInfo(vid.url) : { type: 'none', src: '' };
 
@@ -1681,8 +1706,8 @@ const ordersModal   = $('ordersModal');
 
           const idbOk = await playBlobFromIdb();
           if (!idbOk) {
-            hideSpin();
-            showToast('Video play nahi ho paya — Owner se video link check karwaye');
+            showError(src);
+            showToast('Video link expired ya unavailable hai — Owner se refresh karwaye');
           }
         };
 
@@ -1696,9 +1721,8 @@ const ordersModal   = $('ordersModal');
       } else if (vid.id) {
         const ok = await playBlobFromIdb();
         if (!ok) {
-          hideSpin();
-          showToast('Video file nahi mili — owner se dobara upload karwaye');
-          videoModal.classList.add('hidden');
+          showError('');
+          showToast('Video file nahi mili — owner panel me video link daalein');
         }
       }
     }
@@ -3120,6 +3144,10 @@ setInterval(refreshLiveStore, 2000);
     if (videoIframe) {
       videoIframe.src = '';
     }
+    const errBox = $('videoErrorState');
+    if (errBox) errBox.classList.add('hidden');
+    const spinner = $('videoSpinner');
+    if (spinner) spinner.classList.add('hidden');
   }
   closeDurationBtn.addEventListener('click', closeAllModals);
   closeDepositBtn.addEventListener('click', closeAllModals);
