@@ -224,14 +224,7 @@ const ordersModal   = $('ordersModal');
   const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
   const round5 = n => Math.round(n / 5) * 5;
 
-  /* ─────────── FIREBASE SYNC (cross-device backend) ───────────
-     localStorage = local cache (instant UI) + Firebase = cloud mirror.
-     Har write Firebase par bhi jaata hai; listener remote changes ko
-     localStorage me merge karke UI re-render karta hai. */
-  const fb = { ok: false, db: null, st: null, applying: false };
-  const fbSet = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).set(v).catch(() => {}); return true; };
-  const fbUpdate = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).update(v).catch(() => {}); return true; };
-  const fbPush = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).push(v).catch(() => {}); return true; };
+
   /* ─────────── UNIVERSAL CLOUD UPLOAD (Realtime 0% → 100% Progress) ───────────
      Robust multi-provider uploader supporting photos, videos, PDFs, ZIPs with
      accurate byte-level XHR progress tracking. Zero upload failure rate. */
