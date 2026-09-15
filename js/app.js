@@ -311,12 +311,13 @@ const ordersModal   = $('ordersModal');
     }
     if (!st) throw new Error('Firebase Storage not initialized');
 
-    const cleanName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = 'uploads/' + Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + cleanName;
+    const cleanName = (file.name || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const mime = file.type || (cleanName.match(/\.(mp4|mov|m4v)$/i) ? 'video/mp4' : (cleanName.endsWith('.webm') ? 'video/webm' : 'video/mp4'));
+    const path = 'videos/' + Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '_' + cleanName;
     const ref = st.ref(path);
-    const task = ref.put(file, { contentType: file.type || 'application/octet-stream' });
+    const task = ref.put(file, { contentType: mime });
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase Storage timeout')), 15000));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase Storage timeout')), 120000));
     const uploadP = new Promise((resolve, reject) => {
       task.on('state_changed',
         snap => {
@@ -338,6 +339,38 @@ const ordersModal   = $('ordersModal');
     return Promise.race([uploadP, timeout]);
   }
 
+  async function uploadCatbox(file, onProg) {
+    const fd = new FormData();
+    fd.append('reqtype', 'fileupload');
+    fd.append('time', '72h');
+    fd.append('fileToUpload', file);
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://litterbox.catbox.moe/resources/internals/api.php');
+      xhr.timeout = 120000;
+      if (xhr.upload && typeof onProg === 'function') {
+        xhr.upload.onprogress = e => {
+          if (e.lengthComputable && e.total > 0) onProg(e.loaded, e.total);
+        };
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const text = (xhr.responseText || '').trim();
+          if (text.startsWith('http://') || text.startsWith('https://')) {
+            resolve(text);
+          } else {
+            reject(new Error(text || 'Invalid catbox response'));
+          }
+        } else {
+          reject(new Error('Catbox HTTP ' + xhr.status));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Catbox network error'));
+      xhr.ontimeout = () => reject(new Error('Catbox upload timeout'));
+      xhr.send(fd);
+    });
+  }
+
   async function uploadTmpFiles(file, onProg) {
     const fd = new FormData();
     fd.append('file', file);
@@ -351,6 +384,7 @@ const ordersModal   = $('ordersModal');
   async function universalUpload(file, onProg) {
     if (!file) throw new Error('No file provided');
     const isImg = (file.type || '').startsWith('image/');
+    const isVid = (file.type || '').startsWith('video/') || (file.name || '').match(/\.(mp4|mov|webm|mkv|avi|m4v|3gp)$/i);
 
     // Tier 1: FreeImage for Photos (instant, permanent)
     if (isImg) {
@@ -361,22 +395,29 @@ const ordersModal   = $('ordersModal');
       }
     }
 
-    // Tier 2: Tmpfiles (Direct MP4 URL with live XHR byte progress)
+    // Tier 2: For Videos -> Firebase Storage with video/mp4 MIME or Catbox streamable
+    if (isVid) {
+      try {
+        return await uploadFirebaseStorage(file, onProg);
+      } catch (fbErr) {
+        console.warn('Firebase Storage video upload note:', fbErr);
+      }
+      try {
+        return await uploadCatbox(file, onProg);
+      } catch (catErr) {
+        console.warn('Catbox video upload note:', catErr);
+      }
+    }
+
+    // Tier 3: Tmpfiles (for large files/APKs)
     try {
       return await uploadTmpFiles(file, onProg);
     } catch (tmpErr) {
       console.warn('Tmpfiles primary upload failed:', tmpErr);
     }
 
-    // Tier 3: Firebase Cloud Storage
-    try {
-      return await uploadFirebaseStorage(file, onProg);
-    } catch (fbErr) {
-      console.warn('Firebase Storage upload failed:', fbErr);
-    }
-
-    // Tier 4: Base64 dataUrl (up to 30MB)
-    if (file.size <= 30 * 1048576) {
+    // Tier 4: Base64 dataUrl (only for files <= 800KB to prevent Firestore document overflow)
+    if (file.size <= 800 * 1024) {
       return await fileToDataUrl(file, onProg);
     }
     throw new Error('All cloud upload providers failed');
@@ -1498,6 +1539,16 @@ const ordersModal   = $('ordersModal');
     return { type: 'video', src: str };
   }
 
+  async function fetchVideoAsBlobUrl(url, onStatus) {
+    if (onStatus) onStatus('Connecting video stream...');
+    const resp = await fetch(url, { mode: 'cors' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    if (onStatus) onStatus('Buffering video for mobile...');
+    const blob = await resp.blob();
+    const cleanBlob = new Blob([blob], { type: blob.type && blob.type.startsWith('video/') ? blob.type : 'video/mp4' });
+    return URL.createObjectURL(cleanBlob);
+  }
+
   window.__playPanelVideo = async name => {
     const vid = panelVideo(name);
     if (!vid || (!vid.url && !vid.id)) {
@@ -1507,9 +1558,22 @@ const ordersModal   = $('ordersModal');
     if (videoModalTitle) videoModalTitle.textContent = name + ' — Demo Video';
     videoModal.classList.remove('hidden');
 
+    const spinner = $('videoSpinner');
+    const spinnerText = $('videoSpinnerText');
+    const showSpin = (txt) => {
+      if (spinner) {
+        spinner.classList.remove('hidden');
+        if (spinnerText) spinnerText.textContent = txt || 'Loading video...';
+      }
+    };
+    const hideSpin = () => {
+      if (spinner) spinner.classList.add('hidden');
+    };
+
     const embed = vid.url ? getVideoEmbedInfo(vid.url) : { type: 'none', src: '' };
 
     if (embed.type === 'iframe') {
+      hideSpin();
       if (videoPlayer) {
         try { videoPlayer.pause(); } catch(e){}
         videoPlayer.classList.add('hidden');
@@ -1535,14 +1599,22 @@ const ordersModal   = $('ordersModal');
       videoPlayer.playsInline = true;
       videoPlayer.controls = true;
 
-      const playBlob = async () => {
+      showSpin('Loading video...');
+
+      videoPlayer.oncanplay = () => hideSpin();
+      videoPlayer.onplaying = () => hideSpin();
+      videoPlayer.onloadeddata = () => hideSpin();
+
+      const playBlobFromIdb = async () => {
         if (!vid.id) return false;
         try {
           const blob = await fileGet(vid.id);
           if (blob) {
-            videoPlayer.src = URL.createObjectURL(blob);
+            const blobUrl = URL.createObjectURL(blob);
+            videoPlayer.src = blobUrl;
             videoPlayer.load();
             videoPlayer.play().catch(() => {});
+            hideSpin();
             return true;
           }
         } catch(e) {}
@@ -1550,21 +1622,68 @@ const ordersModal   = $('ordersModal');
       };
 
       if (embed.type === 'video' && embed.src) {
-        videoPlayer.src = embed.src;
+        const src = embed.src;
+
+        // If it's a data URL or blob URL, play directly
+        if (src.startsWith('data:') || src.startsWith('blob:')) {
+          videoPlayer.src = src;
+          videoPlayer.load();
+          videoPlayer.play().catch(() => {});
+          hideSpin();
+          return;
+        }
+
+        // For tmpfiles.org URLs on mobile: convert to blob on-the-fly to prevent attachment/range header crack
+        if (src.includes('tmpfiles.org')) {
+          showSpin('Optimizing video stream for mobile...');
+          try {
+            const blobUrl = await fetchVideoAsBlobUrl(src, txt => showSpin(txt));
+            videoPlayer.src = blobUrl;
+            videoPlayer.load();
+            videoPlayer.play().catch(() => {});
+            hideSpin();
+            return;
+          } catch (fetchErr) {
+            console.warn('Tmpfiles fetch blob note:', fetchErr);
+          }
+        }
+
+        // Standard direct load
+        videoPlayer.src = src;
         videoPlayer.load();
+
         videoPlayer.onerror = async () => {
-          console.warn('Direct video URL failed, attempting local blob fallback...');
-          await playBlob();
+          console.warn('Direct video URL playback failed, attempting fallback blob stream...');
+          showSpin('Connecting fallback video stream...');
+          try {
+            const blobUrl = await fetchVideoAsBlobUrl(src, txt => showSpin(txt));
+            videoPlayer.src = blobUrl;
+            videoPlayer.load();
+            videoPlayer.play().catch(() => {});
+            hideSpin();
+            return;
+          } catch (e2) {
+            console.warn('Fallback stream failed:', e2);
+          }
+
+          const idbOk = await playBlobFromIdb();
+          if (!idbOk) {
+            hideSpin();
+            showToast('Video play nahi ho paya — Owner se video link check karwaye');
+          }
         };
+
         const p = videoPlayer.play();
         if (p !== undefined) {
           p.catch(err => {
-            console.log('Mobile autoplay note (user can tap play button):', err);
+            hideSpin();
+            console.log('Mobile user interaction required to play:', err);
           });
         }
       } else if (vid.id) {
-        const ok = await playBlob();
+        const ok = await playBlobFromIdb();
         if (!ok) {
+          hideSpin();
           showToast('Video file nahi mili — owner se dobara upload karwaye');
           videoModal.classList.add('hidden');
         }
