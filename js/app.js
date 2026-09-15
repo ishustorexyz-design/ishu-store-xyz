@@ -339,78 +339,125 @@ const ordersModal   = $('ordersModal');
   }
 
   const fbUpload = (path, blob, onProg) => universalUpload(blob, onProg);
-  function fbOn(path, cb) { if (!fb.ok) return; fb.db.ref(path).on('value', cb); }
+  /* ─────────── FIRESTORE CLOUD BACKEND (Cross-device realtime sync) ───────────
+     Synchronizes users, store edits, maintenance state, transactions, and orders
+     instantly across PC and mobile phones via Firestore snapshot listeners. */
+  const fb = { ok: false, fs: null, applying: false };
+
   function fbInit() {
     if (!window.firebase || !window.FIREBASE_CONFIG) return;
     try {
-      const app = firebase.initializeApp(window.FIREBASE_CONFIG, 'store');
-      fb.db = firebase.database(app); fb.st = firebase.storage(app); fb.fs = firebase.firestore(app); fb.ok = true;
-      console.log('[FB] ready');
+      const app = firebase.apps.length ? firebase.app('store') : firebase.initializeApp(window.FIREBASE_CONFIG, 'store');
+      fb.fs = firebase.firestore(app);
+      fb.ok = true;
+      console.log('[Firestore] connected');
 
-      fbOn('users', snap => {
-        const v = snap.val() || {};
+      // 1. Live Users Listener (Cross-device Account Mirror)
+      fb.fs.collection('users').onSnapshot(snap => {
         const local = loadUsers();
         let me = null;
-        Object.keys(v).forEach(k => {
-          const r = v[k] || {};
+        snap.forEach(doc => {
+          const r = doc.data() || {};
+          const k = doc.id.toLowerCase();
           const l = local[k];
           if (!l || (r.updatedAt || 0) >= (l.updatedAt || 0)) local[k] = r;
-          if (currentUser && k === currentUser.username) me = r;
+          if (currentUser && k === (currentUser.username || '').toLowerCase()) me = r;
         });
         localStorage.setItem(USERS_KEY, JSON.stringify(local));
-        if (currentUser && me && (me.updatedAt || 0) >= (currentUser.updatedAt || 0)) currentUser = me;
-        renderProfile();
-        if (currentOwner) { renderOwnerUsers(); renderOwnerDash(); renderOwnerSvc(); renderOwnerVerify(); renderOwnerTxns(); }
-      });
+        if (currentUser && me && (me.updatedAt || 0) >= (currentUser.updatedAt || 0)) {
+          currentUser = me;
+          renderProfile();
+        }
+        if (currentOwner) {
+          renderOwnerUsers(); renderOwnerDash(); renderOwnerSvc(); renderOwnerVerify(); renderOwnerTxns();
+        }
+      }, err => console.warn('users sync error:', err));
 
-      fbOn('txns', snap => {
-        const v = snap.val(); if (!Array.isArray(v)) return;
-        localStorage.setItem(TXN_KEY, JSON.stringify(v));
-        if (currentUser && !txnsModal.classList.contains('hidden')) renderTxns();
-        if (currentOwner) { renderOwnerVerify(); renderOwnerTxns(); renderOwnerDash(); }
-      });
-
-      fbOn('orders', snap => {
-        const v = snap.val(); if (!Array.isArray(v)) return;
-        localStorage.setItem(ORDERS_KEY, JSON.stringify(v));
-        if (currentUser && !ordersModal.classList.contains('hidden')) renderOrders();
-        if (currentOwner) { renderOwnerOrders(); renderOwnerDash(); }
-      });
-
-      fbOn('edits', snap => {
-        const v = snap.val(); if (!v || typeof v !== 'object') return;
+      // 2. Live Store Edits Listener (Panel icons, APKs, Video URLs, Custom Prices)
+      fb.fs.collection('system').doc('edits').onSnapshot(doc => {
+        if (!doc.exists) return;
+        const v = doc.data() || {};
         if (fb.applying) return;
         localStorage.setItem(EDITOR_KEY, JSON.stringify(v));
         renderGrid();
         if (currentOwner && !ownerPanels.classList.contains('hidden')) renderOwnerPanels();
-      });
+      }, err => console.warn('edits sync error:', err));
 
-      fbOn('maint', snap => {
-        const v = snap.val(); if (!v || typeof v !== 'object') return;
+      // 3. Live Maintenance Mode Listener (Reflects across PC & Mobile instantly)
+      fb.fs.collection('system').doc('maint').onSnapshot(doc => {
+        if (!doc.exists) return;
+        const v = doc.data() || {};
         if (fb.applying) return;
         localStorage.setItem(MAINT_KEY, JSON.stringify(v));
         renderGrid();
-      });
-    } catch (e) { console.warn('[FB] init fail', e); }
+      }, err => console.warn('maint sync error:', err));
+
+      // 4. Live Transactions Listener
+      fb.fs.collection('system').doc('txns').onSnapshot(doc => {
+        if (!doc.exists) return;
+        const data = doc.data() || {};
+        const v = Array.isArray(data.list) ? data.list : [];
+        localStorage.setItem(TXN_KEY, JSON.stringify(v));
+        if (currentUser && !txnsModal.classList.contains('hidden')) renderTxns();
+        if (currentOwner) { renderOwnerVerify(); renderOwnerTxns(); renderOwnerDash(); }
+      }, err => console.warn('txns sync error:', err));
+
+      // 5. Live Orders Listener
+      fb.fs.collection('system').doc('orders').onSnapshot(doc => {
+        if (!doc.exists) return;
+        const data = doc.data() || {};
+        const v = Array.isArray(data.list) ? data.list : [];
+        localStorage.setItem(ORDERS_KEY, JSON.stringify(v));
+        if (currentUser && !ordersModal.classList.contains('hidden')) renderOrders();
+        if (currentOwner) { renderOwnerOrders(); renderOwnerDash(); }
+      }, err => console.warn('orders sync error:', err));
+
+    } catch (e) {
+      console.warn('[Firestore] init fail', e);
+    }
   }
 
   const loadUsers  = () => { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch(e) { return {}; } };
-  const saveUsers  = u => { const nu = {}; Object.keys(u).forEach(k => { const x = Object.assign({}, u[k]); x.updatedAt = Date.now(); nu[k] = x; }); localStorage.setItem(USERS_KEY, JSON.stringify(nu)); if (!fb.applying) Object.keys(nu).forEach(k => fbSet('users/' + k, nu[k])); };
+  const saveUsers  = u => {
+    const nu = {};
+    Object.keys(u).forEach(k => {
+      const uname = k.toLowerCase();
+      const x = Object.assign({}, u[k]);
+      x.updatedAt = Date.now();
+      nu[uname] = x;
+      if (fb.fs && !fb.applying) {
+        fb.fs.collection('users').doc(uname).set(x, { merge: true }).catch(() => {});
+      }
+    });
+    localStorage.setItem(USERS_KEY, JSON.stringify(nu));
+  };
   const loadOrders = () => { try { return JSON.parse(localStorage.getItem(ORDERS_KEY)) || []; } catch(e) { return []; } };
-  const saveOrders = o => { localStorage.setItem(ORDERS_KEY, JSON.stringify(o)); if (!fb.applying) fbSet('orders', o); };
+  const saveOrders = o => {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(o));
+    if (fb.fs && !fb.applying) fb.fs.collection('system').doc('orders').set({ list: o, updatedAt: Date.now() }).catch(() => {});
+  };
   const loadTxns   = () => { try { return JSON.parse(localStorage.getItem(TXN_KEY)) || []; } catch(e) { return []; } };
-  const saveTxns   = t => { localStorage.setItem(TXN_KEY, JSON.stringify(t)); if (!fb.applying) fbSet('txns', t); };
+  const saveTxns   = t => {
+    localStorage.setItem(TXN_KEY, JSON.stringify(t));
+    if (fb.fs && !fb.applying) fb.fs.collection('system').doc('txns').set({ list: t, updatedAt: Date.now() }).catch(() => {});
+  };
   const loadSupport= () => { try { return JSON.parse(localStorage.getItem(SUPPORT_KEY)) || []; } catch(e) { return []; } };
   const saveSupport= s => localStorage.setItem(SUPPORT_KEY, JSON.stringify(s));
   const loadMaint  = () => { try { return JSON.parse(localStorage.getItem(MAINT_KEY)) || {}; } catch(e) { return {}; } };
-  const saveMaint  = m => { localStorage.setItem(MAINT_KEY, JSON.stringify(m)); if (!fb.applying) fbSet('maint', m); };
+  const saveMaint  = m => {
+    localStorage.setItem(MAINT_KEY, JSON.stringify(m));
+    if (fb.fs && !fb.applying) fb.fs.collection('system').doc('maint').set(m).catch(() => {});
+  };
   const isMaintenance = name => !!loadMaint()[name];
   const TXN_MINUTES = 10;
 
   /* ─────────── Store editor (owner: panel links / photos / cards sold out) ─────────── */
   const EDITOR_KEY = 'ishu_store_editor';
   const loadEdits = () => { try { return JSON.parse(localStorage.getItem(EDITOR_KEY)) || { panels: {}, cards: {} }; } catch(e) { return { panels: {}, cards: {} }; } };
-  const saveEdits = e => { localStorage.setItem(EDITOR_KEY, JSON.stringify(e)); if (!fb.applying) fbSet('edits', e); };
+  const saveEdits = e => {
+    localStorage.setItem(EDITOR_KEY, JSON.stringify(e));
+    if (fb.fs && !fb.applying) fb.fs.collection('system').doc('edits').set(e).catch(() => {});
+  };
   const editImg = (name, def) => { const c = loadEdits().panels[name]; return (c && c.img) ? c.img : def; };
   const editMats = name => { const c = loadEdits().panels[name]; return (c && Array.isArray(c.mats) && c.mats.length) ? c.mats : (PANEL_MATERIALS[name] || []); };
   const panelVideo = name => { const c = (loadEdits().panels || {})[name] || {}; return (c.videoUrl || c.videoId) ? { url: c.videoUrl, id: c.videoId, name: c.videoName || '' } : null; };
@@ -520,7 +567,7 @@ const ordersModal   = $('ordersModal');
   loginName.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
   loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
 
-  function doAuth() {
+  async function doAuth() {
     const username = (loginName.value || '').trim().toLowerCase();
     const pass = loginPass.value || '';
     if (!username || !pass) { showToast('Enter username and password'); return; }
@@ -528,67 +575,81 @@ const ordersModal   = $('ordersModal');
     const users = loadUsers();
 
     if (authMode === 'register') {
-      /* CROSS-DEVICE FIX: cloud me username check — PC/phone wala account duplicate mat banao */
-      const cloudCheck = fb.ok
-        ? fb.db.ref('users/' + username).once('value')
-        : Promise.resolve({ val: () => null });
-      cloudCheck.then(snap => {
-        const cloud = snap.val();
-        if (cloud && !cloud.banned) {
-          // Existing account mila (dobara se usi username se)? Login karo — naya mat banao
-          if (cloud.pass !== pass) { showToast('Ye username pehle se hai — sahi password dalo'); setAuthMode('login'); return; }
-          const nu = Object.assign({}, cloud); nu.updatedAt = Date.now();
-          const list = loadUsers(); list[username] = nu;
-          localStorage.setItem(USERS_KEY, JSON.stringify(list));
-          if (!fb.applying) fb.db.ref('users/' + username).update(nu).catch(() => {});
-          currentUser = nu;
-          showToast('Existing account se login ✓ (aapka PC account mila)');
-          enterStore();
-          return;
+      if (fb.fs) {
+        try {
+          const doc = await fb.fs.collection('users').doc(username).get();
+          if (doc.exists) {
+            showToast('Already this user exists — login karo');
+            setAuthMode('login');
+            return;
+          }
+        } catch (err) {
+          console.warn('Firestore register check err:', err);
         }
-        if (users[username]) { showToast('Username taken — try another'); return; }
-        currentUser = {
-          username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
-          wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now()
-        };
-        saveUsers({ ...users, [username]: currentUser });
-        showToast('Account created — Welcome!');
-        enterStore();
-      }).catch(() => {
-        if (users[username]) { showToast('Username taken — try another'); return; }
-        currentUser = {
-          username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
-          wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now()
-        };
-        saveUsers({ ...users, [username]: currentUser });
-        showToast('Account created — Welcome!');
-        enterStore();
-      });
+      }
+      if (users[username]) {
+        showToast('Already this user exists — login karo');
+        setAuthMode('login');
+        return;
+      }
+      currentUser = {
+        username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
+        wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now(), updatedAt: Date.now()
+      };
+      saveUsers({ ...users, [username]: currentUser });
+      showToast('Account created — Welcome!');
+      enterStore();
       return;
     }
 
-    const u = users[username];
-    if (!u) {
-      if (fb.ok) {
-        showToast('Checking cloud account...');
-        fb.db.ref('users/' + username).once('value').then(snap => {
-          const r = snap.val();
-          if (!r) { showToast('No account found — register first'); setAuthMode('register'); return; }
-          if (r.banned) { showToast('This account has been banned'); return; }
-          const nu = Object.assign({}, r); nu.updatedAt = Date.now();
-          const all = loadUsers(); all[username] = nu; localStorage.setItem(USERS_KEY, JSON.stringify(all));
-          currentUser = nu;
-          enterStore();
-        }).catch(() => { showToast('No account found — register first'); setAuthMode('register'); });
-        return;
+    // Login mode
+    const checkUserMatch = (u) => {
+      if (!u) return false;
+      if (u.pass !== pass) {
+        showToast('Wrong password');
+        return true;
       }
-      showToast('No account found — register first'); setAuthMode('register'); return;
+      if (u.banned) {
+        showToast('This account has been banned');
+        return true;
+      }
+      if (!u.uid) u.uid = 'USR-' + Date.now().toString(36).toUpperCase();
+      currentUser = u;
+      showToast('Login successful ✓');
+      enterStore();
+      return true;
+    };
+
+    // First check local cache
+    const local = users[username];
+    if (local && local.pass === pass) {
+      checkUserMatch(local);
+      return;
     }
-    if (u.pass !== pass) { showToast('Wrong password'); return; }
-    if (u.banned) { showToast('This account has been banned'); return; }
-    if (!u.uid) u.uid = 'USR-' + Date.now().toString(36).toUpperCase();
-    currentUser = u;
-    enterStore();
+
+    // Check Cloud Firestore (for accounts created on PC or other device)
+    if (fb.fs) {
+      try {
+        const doc = await fb.fs.collection('users').doc(username).get();
+        if (doc.exists) {
+          const cloudData = doc.data();
+          const all = loadUsers();
+          all[username] = cloudData;
+          localStorage.setItem(USERS_KEY, JSON.stringify(all));
+          checkUserMatch(cloudData);
+          return;
+        }
+      } catch (err) {
+        console.warn('Firestore login check err:', err);
+      }
+    }
+
+    if (local) {
+      checkUserMatch(local);
+    } else {
+      showToast('No account found — register first');
+      setAuthMode('register');
+    }
   }
 
   /* Google login (placeholder client-id) */
@@ -910,16 +971,17 @@ const ordersModal   = $('ordersModal');
   };
 
   window.__ownerDel = username => {
+    const uname = (username || '').toLowerCase();
     const users = loadUsers();
-    if (!users[username]) return;
+    if (!users[uname] && !users[username]) return;
     if (!confirm('Isse delete kar do: ' + username + '?\nUske wallet, tickets, orders sab remove ho jayenge. Ye permanently hai.')) return;
+    delete users[uname];
     delete users[username];
-    saveUsers(users);
-    if (fb.ok) {
-      fb.db.ref('users/' + username).remove().catch(() => {});
-      fb.db.ref('tickets/' + username).remove().catch(() => {});
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    if (fb.fs) {
+      fb.fs.collection('users').doc(uname).delete().catch(() => {});
     }
-    allTickets = (allTickets || []).filter(t => t.user !== username);
+    allTickets = (allTickets || []).filter(t => (t.user || '').toLowerCase() !== uname);
     renderOwner('users');
     renderTickSidebar && renderTickSidebar(allTickets);
     showToast(username + ' deleted');
