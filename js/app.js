@@ -232,10 +232,16 @@ const ordersModal   = $('ordersModal');
   const fbSet = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).set(v).catch(() => {}); return true; };
   const fbUpdate = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).update(v).catch(() => {}); return true; };
   const fbPush = (p, v) => { if (!fb.ok) return false; fb.db.ref(p).push(v).catch(() => {}); return true; };
-  const fbUpload = (path, blob) => new Promise((res, rej) => {
+  const fbUpload = (path, blob, onProg) => new Promise((res, rej) => {
     if (!fb.ok) return rej(new Error('fb off'));
     const ref = fb.st.ref(path);
-    ref.put(blob).then(s => s.ref.getDownloadURL().then(res)).catch(rej);
+    const task = ref.put(blob);
+    if (typeof onProg === 'function') {
+      task.on('state_changed', s => {
+        onProg(s.bytesTransferred, s.totalBytes || blob.size || 1);
+      }, () => {});
+    }
+    task.then(s => s.ref.getDownloadURL().then(res)).catch(rej);
   });
   function fbOn(path, cb) { if (!fb.ok) return; fb.db.ref(path).on('value', cb); }
   function fbInit() {
@@ -1306,31 +1312,36 @@ videoPlayer.load();
   const ownerSeen      = {};
   let tickUserUnsub    = null;
 
-  function tickMsgHtml(m, uid) {
+  function tickMsgHtml(m, uid, viewer) {
     const t = m.timestamp ? new Date(tsNumber(m.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
     let att = '';
     if (m.attach && m.attach.url) {
-      att = (m.attach.type || '').startsWith('image/')
-        ? `<img class="att-preview" src="${m.attach.url}" alt="">`
-        : `<a class="att-file-link" href="${m.attach.url}" target="_blank" rel="noopener">📎 ${escapeHtml(m.attach.name || 'file')}</a>`;
+      if ((m.attach.type || '').startsWith('image/')) {
+        att = `<img class="att-preview" src="${m.attach.url}" alt="" onclick="window.open('${m.attach.url}')" style="cursor:zoom-in">`;
+      } else if ((m.attach.type || '').startsWith('video/')) {
+        att = `<video class="att-video" controls src="${m.attach.url}"></video>`;
+      } else {
+        att = `<a class="att-file-link" href="${m.attach.url}" target="_blank" rel="noopener">📎 ${escapeHtml(m.attach.name || 'file')}</a>`;
+      }
     }
     const isAdmin = m.sender === 'admin';
-    if (isAdmin) {
-      return `<div class="msg owner-msg">
-        <img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">
+    const mine = viewer === 'owner' ? isAdmin : !isAdmin;
+    const uname = uid || 'User';
+    if (mine) {
+      return `<div class="msg user-msg">
         <div class="msg-c">
           <div class="bubble">${escapeHtml(m.text || '')}${att}</div>
-          <div class="msg-meta"><span class="mn">OWNER (ADMIN)</span> · ${t}</div>
+          <div class="msg-meta"><span class="mn">${isAdmin ? 'OWNER (ADMIN)' : escapeHtml(String(uname))}</span> · ${t}</div>
         </div>
+        ${isAdmin ? `<img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">` : userAvatar(uname)}
       </div>`;
     }
-    const uname = uid || 'User';
-    return `<div class="msg user-msg">
+    return `<div class="msg owner-msg">
+      ${isAdmin ? `<img class="chat-av" src="assets/img/logo/login-logo.png" alt="Owner">` : userAvatar(uname)}
       <div class="msg-c">
         <div class="bubble">${escapeHtml(m.text || '')}${att}</div>
-        <div class="msg-meta"><span class="mn">${escapeHtml(String(uname))}</span> · ${t}</div>
+        <div class="msg-meta"><span class="mn">${isAdmin ? 'OWNER (ADMIN)' : escapeHtml(String(uname))}</span> · ${t}</div>
       </div>
-      ${userAvatar(uname)}
     </div>`;
   }
 
@@ -1357,7 +1368,7 @@ videoPlayer.load();
     const docRef = ticketDoc(tid);
     const msgUnsub = ticketMsgs(tid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];
-      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, currentUser.username)); });
+      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, currentUser.username, 'user')); });
       supportMsgs.innerHTML = html.join('') || '<div class="empty-state">Waiting for owner reply...</div>';
       supportMsgs.scrollTop = supportMsgs.scrollHeight;
     });
@@ -1408,12 +1419,16 @@ videoPlayer.load();
 
   function sendTicketMsg() {
     const text = supportMsgInput.value.trim();
-    if (!text) return;
     if (!fb.fs || !activeTicketId) { showToast('Pehle ticket banao'); return; }
+    const att = pendingAtt && pendingAtt.ok ? resolveAtt() : null;
+    if (!text && !att) return;
+    if (!att && pendingAtt) { showToast('File upload ho raha hai — thoda wait karo'); return; }
     const tid = activeTicketId;
     supportMsgInput.value = '';
-    ticketMsgs(tid).add({ sender: 'user', text, timestamp: Date.now() }).catch(() => {});
-    ticketDoc(tid).update({ lastUpdated: Date.now(), lastSender: 'user', lastText: text.slice(0, 80) }).catch(() => {});
+    const doc = { sender: 'user', text, timestamp: Date.now() };
+    if (att) doc.attach = { name: att.name, type: att.type, size: att.size, url: att.url };
+    ticketMsgs(tid).add(doc).catch(() => {});
+    ticketDoc(tid).update({ lastUpdated: Date.now(), lastSender: 'user', lastText: (att ? '📎 ' : '') + ((text || att.name).slice(0, 80)) }).catch(() => {});
   }
 
 function newTicketReset() {
@@ -1437,6 +1452,68 @@ function newTicketReset() {
     if (u.photo) return `<img class="chat-av" src="${u.photo}" alt="">`;
     const ch = escapeHtml((u.name || username || 'U')[0]).toUpperCase();
     return `<div class="chat-av chat-av-txt">${ch}</div>`;
+  }
+
+  /* ─── ATTACHMENT UPLOAD (WhatsApp-style: pick → real 0→100% → Send) ─── */
+  let pendingAtt = null;
+  const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b >= 1024 ? (b / 1024).toFixed(0) + ' KB' : b + ' B');
+
+  function clearPendingAtt() {
+    if (pendingAtt) { if (pendingAtt.el) pendingAtt.el.remove(); pendingAtt = null; }
+  }
+
+  function prepareAttach(file, who) {
+    const isVideo = (file.type || '').startsWith('video/');
+    const isImg = (file.type || '').startsWith('image/');
+    const maxB = isVideo ? 200 * 1048576 : (isImg ? 100 * 1048576 : 50 * 1048576);
+    if (file.size > maxB) { showToast(isVideo ? 'Video 200MB se choti rakho' : 'File 100MB se choti rakho'); return; }
+    clearPendingAtt();
+    const host = who === 'owner' ? document.querySelector('.tick-main') : ticketChatPanel;
+    const row = who === 'owner' ? host.querySelector('.svc-reply-row') : host.querySelector('.support-input-row');
+    if (!host || !row) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'up-prog';
+    wrap.innerHTML = `
+      <div class="up-prog-head">
+        <span class="up-chip">📎 <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})</span>
+        <span class="up-state wait">0%</span>
+        <button class="up-x" title="Remove" type="button">&times;</button>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>`;
+    host.insertBefore(wrap, row);
+    const fill = wrap.querySelector('.progress-fill');
+    const st = wrap.querySelector('.up-state');
+    const xbtn = wrap.querySelector('.up-x');
+    xbtn.addEventListener('click', clearPendingAtt);
+    pendingAtt = { name: file.name, type: file.type, size: file.size, url: '', ok: false, el: wrap };
+    const dir = 'tickets/' + (who === 'owner' ? activeSvcTicket : activeTicketId) + '/' + (who === 'owner' ? 'a' : 'u') + '_' + Date.now() + '_';
+    fbUpload(dir + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file, (b, t) => {
+      if (!pendingAtt || pendingAtt.el !== wrap) return;
+      const p = Math.min(100, Math.round((b / (t || 1)) * 100));
+      fill.style.width = p + '%';
+      st.textContent = p + '%';
+    }).then(url => {
+      if (pendingAtt && pendingAtt.el === wrap) {
+        pendingAtt.url = url;
+        pendingAtt.ok = true;
+        fill.style.width = '100%';
+        st.textContent = '✓ Ready';
+        st.classList.remove('wait');
+        showToast('Attachment ready — Send dabao');
+      }
+    }).catch(() => {
+      if (pendingAtt && pendingAtt.el === wrap) {
+        st.textContent = 'Upload fail';
+        st.classList.add('err');
+      }
+    });
+  }
+
+  function resolveAtt() {
+    if (!pendingAtt) return null;
+    const a = { name: pendingAtt.name, type: pendingAtt.type, size: pendingAtt.size, url: pendingAtt.url };
+    clearPendingAtt();
+    return a;
   }
 
   /* ─── ADMIN SIDE: ticket dashboard (sidebar + chat + status toggle) ─── */
@@ -1538,7 +1615,7 @@ function newTicketReset() {
     });
     ownerMsgUnsub = ticketMsgs(rid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];
-      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, tInfo.uid)); });
+      snap.forEach(dd => { const m = dd.data(); html.push(tickMsgHtml(m, tInfo.uid, 'owner')); });
       if (msgsEl) { msgsEl.innerHTML = html.join('') || '<div class="empty-state">No messages yet</div>'; msgsEl.scrollTop = msgsEl.scrollHeight; }
     });
     ownerSeen[rid] = Date.now();
@@ -1567,19 +1644,21 @@ function newTicketReset() {
     const file = rfile?.files[0];
     if (!file || !activeSvcTicket || !fb.fs) return;
     rfile.value = '';
-    fbUpload('tickets/' + activeSvcTicket + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file).then(url => {
-      ticketMsgs(activeSvcTicket).add({ sender: 'admin', text: '', timestamp: Date.now(), attach: { name: file.name, type: file.type, size: file.size, url } });
-      ticketDoc(activeSvcTicket).update({ lastUpdated: Date.now(), lastSender: 'admin', lastText: '📎 ' + file.name.slice(0, 60) }).catch(() => {});
-    }).catch(() => showToast('Upload fail'));
+    prepareAttach(file, 'owner');
   }
 
   window.__sendOwnerReply = () => {
     const input = document.getElementById('svcReplyInput');
     const text = input?.value.trim();
-    if (!text || !activeSvcTicket || !fb.fs) { showToast('Type a message first'); return; }
+    if (!activeSvcTicket || !fb.fs) { showToast('Select a ticket first'); return; }
+    const att = pendingAtt && pendingAtt.ok ? resolveAtt() : null;
+    if (!text && !att) { showToast('Type a message or attach a file'); return; }
+    if (!att && pendingAtt) { showToast('File upload ho raha hai — thoda wait karo'); return; }
     input.value = '';
-    ticketMsgs(activeSvcTicket).add({ sender: 'admin', text, timestamp: Date.now() }).catch(() => {});
-    ticketDoc(activeSvcTicket).update({ lastUpdated: Date.now(), lastSender: 'admin', lastText: text.slice(0, 60) }).catch(() => {});
+    const doc = { sender: 'admin', text, timestamp: Date.now() };
+    if (att) doc.attach = { name: att.name, type: att.type, size: att.size, url: att.url };
+    ticketMsgs(activeSvcTicket).add(doc).catch(() => {});
+    ticketDoc(activeSvcTicket).update({ lastUpdated: Date.now(), lastSender: 'admin', lastText: (att ? '📎 ' : '') + ((text || att.name).slice(0, 60)) }).catch(() => {});
     ownerSeen[activeSvcTicket] = Date.now();
     showToast('Reply delivered ✓ (realtime sync ON)');
   };
@@ -1631,6 +1710,12 @@ function newTicketReset() {
   tfNewBtn.addEventListener('click', newTicketReset);
   supportSend.addEventListener('click', sendTicketMsg);
   supportMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendTicketMsg(); });
+  supportFile.addEventListener('change', () => {
+    const f = supportFile.files && supportFile.files[0];
+    supportFile.value = '';
+    if (f && fb.ok && activeTicketId) prepareAttach(f, 'user');
+    else if (f) document.getElementById('supportMsg').placeholder = 'Pehle ticket banao...';
+  });
 
   /* ─────────── LIVE STORE REFRESH (owner edits reflect without reload) ─────────── */
   let lastStoreSig = '';
@@ -1693,7 +1778,10 @@ setInterval(refreshLiveStore, 2000);
   function renderGrid() {
     const cardsSec = $('cards');
     if (!cardsSec.classList.contains('hidden')) { renderCardGrid(); return; }
-    const list = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
+    const baseList = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
+    const otherList = currentGroup === 'pc' ? MOBILE_PANELS : PC_PANELS;
+    const extraMaint = otherList.filter(p => isMaintenance(p.name));
+    const list = baseList.concat(extraMaint);
     panelGrid.innerHTML = list.map(p => {
       const base1h = p.prices[0];
       const { price, off } = priceAfter(base1h);
@@ -1706,7 +1794,7 @@ setInterval(refreshLiveStore, 2000);
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
             <img src="${editImg(p.name, p.img)}" alt="${p.name}" loading="lazy">
-            ${panelVid && !maint ? `<button class="tile-play" title="Panel demo dekho" onclick="event.stopPropagation(); window.__playPanelVideo('${p.name.replace(/'/g, "\\'")}')"></button>` : ''}
+            ${panelVid ? `<button class="tile-play" title="Panel demo dekho" onclick="event.stopPropagation(); window.__playPanelVideo('${p.name.replace(/'/g, "\\'")}')"></button>` : ''}
             ${p.tag ? `<span class="tile-tag">${p.tag}</span>` : ''}
             ${off && !maint ? `<span class="tile-tag gold">20% OFF</span>` : ''}
             ${maint ? `
@@ -2084,6 +2172,65 @@ setInterval(refreshLiveStore, 2000);
       const k = el.getAttribute('data-key');
       fileGet(k).then(blob => { if (blob) { el.src = URL.createObjectURL(blob); el.classList.remove('hidden'); } }).catch(() => {});
     });
+    txnsList.querySelectorAll('.txn-verify input[type=file]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const fid = inp.id.replace('shot_', '');
+        const f = inp.files && inp.files[0];
+        if (f) prepareTxnShot(fid, f);
+      });
+    });
+  }
+
+  const txnUpls = {};
+  function prepareTxnShot(id, file) {
+    if (txnUpls[id] && txnUpls[id].p) return txnUpls[id].p;
+    const isImg = (file.type || '').startsWith('image/');
+    if (file.size > 100 * 1048576) { showToast('Screenshot 100MB se choti rakho'); return Promise.resolve(''); }
+    const item = document.getElementById('shot_' + id)?.closest('.txn-item');
+    let wrap = item && item.querySelector('.up-prog');
+    if (wrap) wrap.remove();
+    if (item) {
+      wrap = document.createElement('div');
+      wrap.className = 'up-prog';
+      wrap.innerHTML = `
+        <div class="up-prog-head">
+          <span class="up-chip">📎 <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})</span>
+          <span class="up-state wait">0%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>`;
+      const place = item.querySelector('.txn-verify') || item;
+      place.insertAdjacentElement('afterend', wrap);
+    }
+    const fill = wrap.querySelector('.progress-fill');
+    const st = wrap.querySelector('.up-state');
+    const done = url => {
+      if (wrap) { fill.style.width = '100%'; if (st) { st.textContent = url ? '✓ Ready' : 'Saved (offline)'; st.classList.remove('wait'); } }
+      txnUpls[id] = { done: true, url: url || '', p: txnUpls[id] ? txnUpls[id].p : null };
+      if (url) {
+        const list = loadTxns();
+        const rec = list.find(t => t.id === id);
+        if (rec) { rec.ssUrl = url; saveTxns(list); }
+      }
+      if (wrap) setTimeout(() => { if (wrap && wrap.parentNode) wrap.remove(); }, 2200);
+    };
+    const ssKey = 'ss_' + id.toLowerCase();
+    filePut(ssKey, file).then(() => {
+      const list = loadTxns();
+      const rec = list.find(t => t.id === id);
+      if (rec && !rec.ssKey) { rec.ssKey = ssKey; saveTxns(list); }
+    }).catch(() => {});
+    if (fb.ok) {
+      const p = fbUpload('ss/' + id.toLowerCase() + '/shot_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file, (b, t) => {
+        if (!wrap) return;
+        const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
+        fill.style.width = pct + '%';
+        if (st) st.textContent = pct + '%';
+      }).then(url => { done(url); return url; }).catch(() => { done(''); return ''; });
+      txnUpls[id] = { done: false, url: '', p };
+      return p;
+    }
+    done('');
+    return Promise.resolve('');
   }
 
   window.__payTxn = id => {
@@ -2107,30 +2254,22 @@ setInterval(refreshLiveStore, 2000);
     const all = loadTxns();
     const hit = all.find(t => t.id === id);
     if (hit && hit.status === 'pending') {
+      let ssUrl = hit.ssUrl || '';
+      if (shot) {
+        if (txnUpls[id] && txnUpls[id].done) ssUrl = txnUpls[id].url || ssUrl;
+        else {
+          showToast('Screenshot upload...');
+          ssUrl = await prepareTxnShot(id, shot);
+        }
+      }
       hit.received = true;
       hit.utr = utr;
-      if (shot) hit.ss = shot.name;
+      if (shot && !hit.ss) hit.ss = shot.name;
+      if (shot && !hit.ssKey) hit.ssKey = 'ss_' + hit.id.toLowerCase();
+      if (ssUrl) hit.ssUrl = ssUrl;
       saveTxns(all);
       renderTxns();
       showToast('UTR + screenshot sent — admin verify kar ke credit karega ✓');
-      if (shot) {
-        const ssKey = 'ss_' + hit.id.toLowerCase();
-        filePut(ssKey, shot).then(() => {
-          const list = loadTxns();
-          const rec = list.find(t => t.id === hit.id);
-          if (rec) { rec.ssKey = ssKey; saveTxns(list); }
-        }).catch(e => console.warn('Screenshot save failed', e));
-        if (fb.ok) {
-          fbUpload('ss/' + hit.id.toLowerCase() + '/' + Date.now() + '_' + shot.name, shot)
-            .then(url => {
-              if (url) {
-                const list = loadTxns();
-                const rec = list.find(t => t.id === hit.id);
-                if (rec) { rec.ssUrl = url; saveTxns(list); }
-              }
-            }).catch(e => console.warn('FB ss upload fail', e));
-        }
-      }
     }
   };
 
