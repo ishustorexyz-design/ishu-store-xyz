@@ -347,7 +347,12 @@ const ordersModal   = $('ordersModal');
   function fbInit() {
     if (!window.firebase || !window.FIREBASE_CONFIG) return;
     try {
-      const app = firebase.apps.length ? firebase.app('store') : firebase.initializeApp(window.FIREBASE_CONFIG, 'store');
+      let app;
+      if (firebase.apps && firebase.apps.length > 0) {
+        app = firebase.apps[0];
+      } else {
+        app = firebase.initializeApp(window.FIREBASE_CONFIG);
+      }
       fb.fs = firebase.firestore(app);
       fb.ok = true;
       console.log('[Firestore] connected');
@@ -570,43 +575,50 @@ const ordersModal   = $('ordersModal');
   async function doAuth() {
     const username = (loginName.value || '').trim().toLowerCase();
     const pass = loginPass.value || '';
-    if (!username || !pass) { showToast('Enter username and password'); return; }
+    if (!username || !pass) { showToast('Username aur password dono daalein'); return; }
 
     const users = loadUsers();
+    const local = users[username];
 
     if (authMode === 'register') {
+      if (local) {
+        showToast('Already this user exists — login karo');
+        setAuthMode('login');
+        return;
+      }
+
       if (fb.fs) {
         try {
-          const doc = await fb.fs.collection('users').doc(username).get();
-          if (doc.exists) {
+          const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000));
+          const doc = await Promise.race([
+            fb.fs.collection('users').doc(username).get(),
+            timeoutPromise
+          ]);
+          if (doc && doc.exists) {
             showToast('Already this user exists — login karo');
             setAuthMode('login');
             return;
           }
         } catch (err) {
-          console.warn('Firestore register check err:', err);
+          console.warn('Firestore register check err/timeout:', err);
         }
       }
-      if (users[username]) {
-        showToast('Already this user exists — login karo');
-        setAuthMode('login');
-        return;
-      }
+
       currentUser = {
         username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
         wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now(), updatedAt: Date.now()
       };
       saveUsers({ ...users, [username]: currentUser });
-      showToast('Account created — Welcome!');
+      showToast('Account ban gaya — Welcome!');
       enterStore();
       return;
     }
 
     // Login mode
-    const checkUserMatch = (u) => {
+    const proceedLogin = (u) => {
       if (!u) return false;
       if (u.pass !== pass) {
-        showToast('Wrong password');
+        showToast('Wrong password — password galat hai');
         return true;
       }
       if (u.banned) {
@@ -620,34 +632,37 @@ const ordersModal   = $('ordersModal');
       return true;
     };
 
-    // First check local cache
-    const local = users[username];
+    // Fast check local cache
     if (local && local.pass === pass) {
-      checkUserMatch(local);
+      proceedLogin(local);
       return;
     }
 
-    // Check Cloud Firestore (for accounts created on PC or other device)
+    // Check Cloud Firestore (for cross-device login)
     if (fb.fs) {
       try {
-        const doc = await fb.fs.collection('users').doc(username).get();
-        if (doc.exists) {
-          const cloudData = doc.data();
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000));
+        const doc = await Promise.race([
+          fb.fs.collection('users').doc(username).get(),
+          timeoutPromise
+        ]);
+        if (doc && doc.exists) {
+          const cloudData = doc.data() || {};
           const all = loadUsers();
           all[username] = cloudData;
           localStorage.setItem(USERS_KEY, JSON.stringify(all));
-          checkUserMatch(cloudData);
+          proceedLogin(cloudData);
           return;
         }
       } catch (err) {
-        console.warn('Firestore login check err:', err);
+        console.warn('Firestore login check err/timeout:', err);
       }
     }
 
     if (local) {
-      checkUserMatch(local);
+      proceedLogin(local);
     } else {
-      showToast('No account found — register first');
+      showToast('No account found — Pehle Register karein');
       setAuthMode('register');
     }
   }
@@ -2546,17 +2561,12 @@ setInterval(refreshLiveStore, 2000);
   setAuthMode('login');
   renderGrid();
 
-  /* One-time clean: sabhi test accounts ka balance/deposits reset (v2 pricing ke liye) */
-  if (!localStorage.getItem('ishu_reset_v2')) {
-    const users = loadUsers();
-    Object.keys(users).forEach(k => {
-      users[k].wallet = 0;
-      users[k].deposits = 0;
-      users[k].premiumUntil = 0;
-      users[k].purchases = 0;
-    });
-    saveUsers(users);
-    localStorage.setItem('ishu_reset_v2', '1');
+  /* One-time clean: Reset all old test accounts for fresh universal registration */
+  if (!localStorage.getItem('ishu_users_clean_v4')) {
+    localStorage.removeItem(USERS_KEY);
     localStorage.removeItem(ORDERS_KEY);
+    localStorage.removeItem(TXN_KEY);
+    localStorage.removeItem(ACTIVE_TICKET_KEY);
+    localStorage.setItem('ishu_users_clean_v4', '1');
   }
 });
