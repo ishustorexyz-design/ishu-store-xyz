@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=25">
 </head>
 <body>
 
@@ -64,7 +64,6 @@
 <div id="ownerPage" class="app owner hidden">
   <nav class="navbar">
     <div class="nav-logo">
-      <img src="assets/img/logo/login-logo.png" alt="Logo" class="nav-logo-img" onerror="this.style.display='none'">
       <h2 class="store-name sm">OWNER <span>PANEL</span></h2>
     </div>
     <button id="ownerMenuBtn" class="owner-menu-btn" title="Menu">
@@ -128,8 +127,7 @@
   <!-- Top Navbar -->
   <nav class="navbar">
     <div class="nav-logo">
-      <img src="assets/img/logo/login-logo.png" alt="Logo" class="nav-logo-img" onerror="this.style.display='none'">
-      <h2 class="store-name sm">ISHU <span>STORE</span> XYZ</h2>
+      <h2 class="store-name sm">ISHU <span>STORE</span> <span class="xyz-tag">XYZ</span></h2>
     </div>
 
     <div class="nav-links">
@@ -391,15 +389,20 @@
   </div>
 </div>
 
-<!-- ═══════════ SUPPORT CHAT MODAL ═══════════ -->
 <div id="videoModal" class="modal hidden">
   <div class="modal-card modal-wide">
     <button class="modal-close" id="closeVideoBtn">✕</button>
     <h3 id="videoModalTitle">Panel Demo</h3>
     <p class="modal-sub">Play video tutorial</p>
     <div id="videoContainer" class="video-container">
-      <video id="videoPlayer" class="video-player" controls playsinline webkit-playsinline preload="auto"></video>
+      <video id="videoPlayer" class="video-player" controls playsinline webkit-playsinline x5-playsinline preload="auto"></video>
       <iframe id="videoIframe" class="video-player hidden" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    </div>
+    <div style="text-align:center; margin-top:12px;">
+      <a id="videoDirectLink" class="btn btn-sm btn-ghost hidden" target="_blank" rel="noopener noreferrer">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+        Open Video in New Tab / Player
+      </a>
     </div>
   </div>
 </div>
@@ -487,6 +490,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=31"></script>
+<script src="js/app.js?v=32"></script>
 </body>
 </html>

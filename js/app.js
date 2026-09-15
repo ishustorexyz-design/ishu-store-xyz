@@ -1507,6 +1507,16 @@ const ordersModal   = $('ordersModal');
     if (videoModalTitle) videoModalTitle.textContent = name + ' — Demo Video';
     videoModal.classList.remove('hidden');
 
+    const directLinkEl = $('videoDirectLink');
+    if (directLinkEl) {
+      if (vid.url) {
+        directLinkEl.href = vid.url;
+        directLinkEl.classList.remove('hidden');
+      } else {
+        directLinkEl.classList.add('hidden');
+      }
+    }
+
     const embed = vid.url ? getVideoEmbedInfo(vid.url) : { type: 'none', src: '' };
 
     if (embed.type === 'iframe') {
@@ -1531,6 +1541,7 @@ const ordersModal   = $('ordersModal');
       videoPlayer.classList.remove('hidden');
       videoPlayer.setAttribute('playsinline', '');
       videoPlayer.setAttribute('webkit-playsinline', '');
+      videoPlayer.setAttribute('x5-playsinline', '');
       videoPlayer.controls = true;
 
       const playBlob = async () => {
@@ -1553,12 +1564,14 @@ const ordersModal   = $('ordersModal');
         videoPlayer.onerror = async () => {
           console.warn('Cloud video URL failed, attempting local fallback...');
           const ok = await playBlob();
-          if (!ok) showToast('Video play nahi ho paya — URL check karein');
+          if (!ok && directLinkEl) {
+            directLinkEl.classList.remove('hidden');
+          }
         };
         const p = videoPlayer.play();
         if (p !== undefined) {
           p.catch(err => {
-            console.log('Video autoplay prevented (user can tap play button):', err);
+            console.log('Video autoplay note (mobile user taps play):', err);
           });
         }
       } else if (vid.id) {

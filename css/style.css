@@ -45,8 +45,33 @@ body {
   animation: shine 4s linear infinite;
   filter: drop-shadow(0 0 18px rgba(255,138,0,.5));
 }
-.store-name.sm { font-size: 19px; letter-spacing: 3px; animation: shine 5s linear infinite; }
+.store-name.sm {
+  font-size: 23px;
+  letter-spacing: 3.5px;
+  font-weight: 900;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  animation: shine 5s linear infinite;
+  text-shadow: 0 0 24px rgba(255,138,0,.65);
+}
 .store-name span { -webkit-text-fill-color: transparent; }
+.store-name.sm span {
+  background: var(--grad1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.store-name.sm .xyz-tag {
+  background: linear-gradient(135deg, #00e5ff, #00ff88) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  font-size: 0.95em;
+  font-family: 'Orbitron', 'Audiowide', sans-serif;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(0,229,255,.6);
+}
 .login-logo .store-name span { background: var(--grad1); -webkit-background-clip: text; background-clip: text; }
 @keyframes shine {
   to { background-position: 220% center; }
@@ -1080,10 +1105,7 @@ body::before {
   .profile-card { flex-direction: column; text-align: center; }
   .pc-tags, .pc-actions { justify-content: center; }
   .pc-stats { justify-content: center; }
-  .pc-avatar { justify-content: center; }
-  .section-tabs { top: 73px; }
-  .store-name.sm { display: none; }
-}
+  .store-name.sm { display: inline-flex !important; font-size: 16.5px; letter-spacing: 1.5px; }
 /* ---------- OWNER LOGIN (login page) ---------- */
 .owner-login-toggle {
   display: block; width: 100%; margin-top: 18px; padding: 12px;
