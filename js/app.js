@@ -1145,25 +1145,367 @@ const ordersModal   = $('ordersModal');
       </div>`;
   }
 
-  /* ─────────── OWNER: USERS ─────────── */
-  function renderOwnerUsers() {
+  /* ─────────── OWNER: USERS & BIODATA CONTROL ─────────── */
+  window.__ownerUserSearchTerm = '';
+
+  window.__onOwnerUserSearch = val => {
+    window.__ownerUserSearchTerm = (val || '').trim().toLowerCase();
+    const container = document.getElementById('ownerUsersCardList');
+    if (container) {
+      container.innerHTML = getOwnerUserCardsHtml();
+    } else {
+      renderOwnerUsers();
+    }
+  };
+
+  function getFilteredOwnerUsers() {
     const users = loadUsers();
-    const rows = Object.values(users).sort((a, b) => (b.deposits || 0) - (a.deposits || 0));
-    ownerUsers.innerHTML = rows.map(u => `
-      <div class="admin-row">
-        <div class="au-info">
-          <strong>${u.name || u.username}</strong>
-          <small class="mono">${u.uid || 'USR-?'} · ${u.username}</small>
-        </div>
-        <div class="au-stats">
-          <span>₹${(u.wallet || 0).toLocaleString('en-IN')}</span>
-          <span>dep ₹${(u.deposits || 0).toLocaleString('en-IN')}</span>
-          <span>${(u.purchases || 0)} buys</span>
-        </div>
-        <button class="btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}" onclick="window.__ownerBan('${u.username}')">${u.banned ? 'Unban' : 'Ban'}</button>
-        <button class="btn btn-sm btn-del" onclick="window.__ownerDel('${u.username}')">Delete</button>
-      </div>`).join('') || '<div class="empty-state">No users yet</div>';
+    const all = Object.values(users).sort((a, b) => (b.deposits || 0) - (a.deposits || 0));
+    const term = window.__ownerUserSearchTerm;
+    if (!term) return { all, filtered: all };
+    const filtered = all.filter(u => {
+      const uname = (u.username || '').toLowerCase();
+      const name = (u.name || '').toLowerCase();
+      const uid = (u.uid || '').toLowerCase();
+      return uname.includes(term) || name.includes(term) || uid.includes(term);
+    });
+    return { all, filtered };
   }
+
+  function getOwnerUserCardsHtml() {
+    const { filtered } = getFilteredOwnerUsers();
+    if (!filtered.length) {
+      return '<div class="empty-state">No matching users found</div>';
+    }
+    return filtered.map(u => {
+      const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
+      const badgeClass = (u.badge || 'bronze').toLowerCase();
+      const uidStr = u.uid || 'USR-?';
+      return `
+        <div class="owner-user-card" id="usercard_${u.username}">
+          <div class="ouc-top">
+            <div class="ouc-left">
+              ${u.avatar ? `<img src="${u.avatar}" class="ouc-avatar" alt="">` : `<div class="ouc-avatar">${initial}</div>`}
+              <div class="ouc-details">
+                <strong>${escapeHtml(u.name || u.username)}</strong>
+                <div class="ouc-id-row">
+                  <span class="ouc-uid-pill" title="Click to copy User ID" onclick="navigator.clipboard.writeText('${uidStr}').then(() => showToast('Copied UID: ${uidStr}'))">${uidStr} 📋</span>
+                  <span class="muted2">@${escapeHtml(u.username)}</span>
+                  <span class="ouc-badge-tag ${u.banned ? 'banned' : badgeClass}">${u.banned ? 'BANNED' : badgeClass.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ouc-stats">
+            <div class="ouc-stat">
+              <span class="val gold">₹${(u.wallet || 0).toLocaleString('en-IN')}</span>
+              <span class="lbl">Balance</span>
+            </div>
+            <div class="ouc-stat">
+              <span class="val green">₹${(u.deposits || 0).toLocaleString('en-IN')}</span>
+              <span class="lbl">Total Deposit</span>
+            </div>
+            <div class="ouc-stat">
+              <span class="val">${u.purchases || 0}</span>
+              <span class="lbl">Orders</span>
+            </div>
+            <div class="ouc-stat">
+              <span class="val" style="font-size:12px; font-weight:600; color:#cfd4e2;">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Active'}</span>
+              <span class="lbl">Joined</span>
+            </div>
+          </div>
+
+          <div class="ouc-actions">
+            <button class="btn btn-sm btn-credit" onclick="window.__ownerCreditBalance('${u.username}')">＋ Credit</button>
+            <button class="btn btn-sm btn-debit" onclick="window.__ownerDebitBalance('${u.username}')">− Debit</button>
+            <button class="btn btn-sm btn-bio" onclick="window.__ownerViewBiodata('${u.username}')">📂 Biodata</button>
+            <button class="btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}" onclick="window.__ownerBan('${u.username}')">${u.banned ? 'Unban' : 'Ban'}</button>
+            <button class="btn btn-sm btn-del" onclick="window.__ownerDel('${u.username}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderOwnerUsers() {
+    const { all, filtered } = getFilteredOwnerUsers();
+    ownerUsers.innerHTML = `
+      <div class="owner-user-toolbar">
+        <div class="owner-user-search">
+          <svg class="icon-sm ous-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="ownerUserSearchInput" type="text" placeholder="Search by User ID (e.g. USR-...) or username..." value="${escapeHtml(window.__ownerUserSearchTerm || '')}" oninput="window.__onOwnerUserSearch(this.value)">
+          ${window.__ownerUserSearchTerm ? `<button class="ous-clear" onclick="window.__onOwnerUserSearch('')">✕</button>` : ''}
+        </div>
+        <div class="ous-counter">Showing ${filtered.length} of ${all.length} users</div>
+      </div>
+      <div id="ownerUsersCardList">
+        ${getOwnerUserCardsHtml()}
+      </div>
+    `;
+  }
+
+  /* ─────────── OWNER BALANCE CONTROLS (CREDIT / DEBIT) ─────────── */
+  function findTargetUser(users, query) {
+    if (!query) return null;
+    const q = String(query).trim().toLowerCase();
+    if (users[q]) return users[q];
+    return Object.values(users).find(u =>
+      (u.username && u.username.toLowerCase() === q) ||
+      (u.uid && u.uid.toLowerCase() === q) ||
+      (u.name && u.name.toLowerCase() === q)
+    ) || null;
+  }
+
+  window.__ownerCreditBalance = usernameOrUid => {
+    const users = loadUsers();
+    const u = findTargetUser(users, usernameOrUid);
+    if (!u) { showToast('User not found'); return; }
+
+    const inputAmt = prompt(
+      `💰 CREDIT FUNDS TO USER\n` +
+      `User: ${u.name || u.username} (@${u.username})\n` +
+      `User ID: ${u.uid || 'USR-?'}\n` +
+      `Current Balance: ₹${(u.wallet || 0).toLocaleString('en-IN')}\n\n` +
+      `Enter amount to ADD (₹):`
+    );
+    if (inputAmt === null) return;
+    const amt = parseFloat(inputAmt);
+    if (isNaN(amt) || amt <= 0) {
+      alert('Kripya valid amount enter karein (greater than 0).');
+      return;
+    }
+
+    const reason = prompt('Add credit reason/note (optional):', 'Manual Admin Credit') || 'Admin Credit';
+    const uname = (u.username || '').toLowerCase();
+
+    u.wallet = (u.wallet || 0) + amt;
+    u.deposits = (u.deposits || 0) + amt; // counts towards deposits for VIP rank
+    saveUsers(users);
+
+    // Record audit transaction
+    const txns = loadTxns();
+    txns.unshift({
+      id: 'CR-' + Date.now().toString().slice(-6),
+      user: u.username,
+      type: 'deposit',
+      amount: amt,
+      status: 'paid',
+      createdAt: Date.now(),
+      note: reason,
+      received: true
+    });
+    saveTxns(txns);
+
+    if (currentUser && currentUser.username.toLowerCase() === uname) {
+      currentUser.wallet = u.wallet;
+      currentUser.deposits = u.deposits;
+      renderProfile();
+    }
+
+    renderOwnerUsers();
+    renderOwnerDash();
+    showToast(`✅ ₹${amt} successfully credited to ${u.username}! Balance: ₹${u.wallet}`);
+  };
+
+  window.__ownerDebitBalance = usernameOrUid => {
+    const users = loadUsers();
+    const u = findTargetUser(users, usernameOrUid);
+    if (!u) { showToast('User not found'); return; }
+
+    const inputAmt = prompt(
+      `💸 DEBIT FUNDS FROM USER\n` +
+      `User: ${u.name || u.username} (@${u.username})\n` +
+      `User ID: ${u.uid || 'USR-?'}\n` +
+      `Current Balance: ₹${(u.wallet || 0).toLocaleString('en-IN')}\n\n` +
+      `Enter amount to DEDUCT (₹):`
+    );
+    if (inputAmt === null) return;
+    const amt = parseFloat(inputAmt);
+    if (isNaN(amt) || amt <= 0) {
+      alert('Kripya valid amount enter karein (greater than 0).');
+      return;
+    }
+
+    const currentWal = u.wallet || 0;
+    if (currentWal < amt) {
+      if (!confirm(`Warning: User ke pass sirf ₹${currentWal} hain. Debit karne se balance negative (-₹${amt - currentWal}) ho jayega. Kya aap continue karna chahte hain?`)) {
+        return;
+      }
+    }
+
+    const reason = prompt('Debit reason/note (optional):', 'Manual Admin Debit') || 'Admin Debit';
+    const uname = (u.username || '').toLowerCase();
+
+    u.wallet = currentWal - amt;
+    saveUsers(users);
+
+    // Record audit transaction
+    const txns = loadTxns();
+    txns.unshift({
+      id: 'DB-' + Date.now().toString().slice(-6),
+      user: u.username,
+      type: 'debit',
+      amount: amt,
+      status: 'paid',
+      createdAt: Date.now(),
+      note: reason,
+      received: true
+    });
+    saveTxns(txns);
+
+    if (currentUser && currentUser.username.toLowerCase() === uname) {
+      currentUser.wallet = u.wallet;
+      renderProfile();
+    }
+
+    renderOwnerUsers();
+    renderOwnerDash();
+    showToast(`✅ ₹${amt} debited from ${u.username}! Balance: ₹${u.wallet}`);
+  };
+
+  /* ─────────── OWNER VIEW FULL USER BIODATA ─────────── */
+  window.__ownerViewBiodata = usernameOrUid => {
+    const users = loadUsers();
+    const u = findTargetUser(users, usernameOrUid);
+    if (!u) { showToast('User not found'); return; }
+
+    const uname = (u.username || '').toLowerCase();
+    const orders = loadOrders().filter(o => (o.user || '').toLowerCase() === uname);
+    const txns = loadTxns().filter(t => (t.user || '').toLowerCase() === uname);
+    const tickets = (allTickets || []).filter(t => (t.user || '').toLowerCase() === uname);
+
+    const modal = document.getElementById('ownerBiodataModal');
+    const content = document.getElementById('ownerBiodataContent');
+    if (!modal || !content) return;
+
+    const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
+
+    content.innerHTML = `
+      <div class="bio-head">
+        ${u.avatar ? `<img src="${u.avatar}" class="bio-av" alt="">` : `<div class="bio-av">${initial}</div>`}
+        <div class="bio-meta">
+          <h3>${escapeHtml(u.name || u.username)} <span class="muted2">(@${escapeHtml(u.username)})</span></h3>
+          <div class="ouc-id-row" style="margin-top:6px;">
+            <span class="ouc-uid-pill" onclick="navigator.clipboard.writeText('${u.uid || ''}').then(() => showToast('Copied UID'))">${u.uid || 'USR-?'} 📋</span>
+            <span class="ouc-badge-tag ${(u.badge || 'bronze').toLowerCase()}">${(u.badge || 'BRONZE').toUpperCase()}</span>
+            ${u.banned ? '<span class="ouc-badge-tag banned">BANNED</span>' : '<span class="green" style="font-size:11px; font-weight:700;">● Active</span>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="bio-summary-grid">
+        <div class="bio-sum-card">
+          <span class="b-val gold">₹${(u.wallet || 0).toLocaleString('en-IN')}</span>
+          <span class="b-lbl">Current Balance</span>
+        </div>
+        <div class="bio-sum-card">
+          <span class="b-val green">₹${(u.deposits || 0).toLocaleString('en-IN')}</span>
+          <span class="b-lbl">Total Deposited</span>
+        </div>
+        <div class="bio-sum-card">
+          <span class="b-val">${orders.length}</span>
+          <span class="b-lbl">Total Orders</span>
+        </div>
+        <div class="bio-sum-card">
+          <span class="b-val">${tickets.length}</span>
+          <span class="b-lbl">Support Tickets</span>
+        </div>
+      </div>
+
+      <div class="ouc-actions" style="margin-bottom:20px; padding:12px; background:rgba(0,0,0,0.3); border-radius:10px;">
+        <span style="font-size:12px; color:#ffd700; font-weight:700; margin-right:6px;">QUICK BALANCE ACTIONS:</span>
+        <button class="btn btn-sm btn-credit" onclick="window.__ownerCreditBalance('${u.username}'); window.__ownerViewBiodata('${u.username}');">＋ Credit Funds</button>
+        <button class="btn btn-sm btn-debit" onclick="window.__ownerDebitBalance('${u.username}'); window.__ownerViewBiodata('${u.username}');">− Debit Funds</button>
+        <button class="btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}" onclick="window.__ownerBan('${u.username}'); window.__ownerViewBiodata('${u.username}');">${u.banned ? 'Unban User' : 'Ban User'}</button>
+      </div>
+
+      <!-- Orders Table -->
+      <div class="bio-section-title">📦 Orders History (${orders.length})</div>
+      ${orders.length ? `
+        <table class="bio-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Item / Duration</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Key / Credentials</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.slice(0, 15).map(o => `
+              <tr>
+                <td class="mono">${escapeHtml(o.id || '-')}</td>
+                <td><b>${escapeHtml(o.item || '-')}</b></td>
+                <td class="gold">₹${o.price || 0}</td>
+                <td><span class="order-status ${(o.status || 'pending').toLowerCase()}">${String(o.status || '').toUpperCase()}</span></td>
+                <td>${o.ts ? new Date(o.ts).toLocaleDateString() : '-'}</td>
+                <td class="mono" style="font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(o.details || '-')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="muted2" style="font-size:12px; margin-bottom:14px;">No orders recorded for this user</div>'}
+
+      <!-- Transactions Table -->
+      <div class="bio-section-title">💳 Transactions (${txns.length})</div>
+      ${txns.length ? `
+        <table class="bio-table">
+          <thead>
+            <tr>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>UTR / Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${txns.slice(0, 15).map(t => `
+              <tr>
+                <td class="mono">${escapeHtml(t.id || '-')}</td>
+                <td><span class="txn-type">${String(t.type || 'deposit').toUpperCase()}</span></td>
+                <td class="gold">₹${t.amount || 0}</td>
+                <td><span class="order-status ${(t.status || 'pending').toLowerCase()}">${String(t.status || '').toUpperCase()}</span></td>
+                <td>${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '-'}</td>
+                <td>${escapeHtml(t.utr || t.note || '-')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="muted2" style="font-size:12px; margin-bottom:14px;">No transactions recorded for this user</div>'}
+
+      <!-- Support Tickets -->
+      <div class="bio-section-title">💬 Support Tickets (${tickets.length})</div>
+      ${tickets.length ? `
+        <table class="bio-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tickets.map(tk => `
+              <tr>
+                <td class="mono">${escapeHtml(tk.ticketId || tk.id || '-')}</td>
+                <td>${escapeHtml(tk.category || 'General')}</td>
+                <td><span class="order-status ${(tk.status || 'open').toLowerCase()}">${String(tk.status || 'OPEN').toUpperCase()}</span></td>
+                <td>${tk.updatedAt ? new Date(tk.updatedAt).toLocaleDateString() : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="muted2" style="font-size:12px;">No support tickets opened by this user</div>'}
+    `;
+
+    modal.classList.remove('hidden');
+  };
 
   window.__ownerBan = username => {
     const users = loadUsers();
@@ -1171,7 +1513,7 @@ const ordersModal   = $('ordersModal');
     if (!u) return;
     u.banned = !u.banned;
     saveUsers(users);
-    renderOwner('users');
+    renderOwnerUsers();
     showToast(u.banned ? username + ' banned' : username + ' unbanned');
   };
 
@@ -1187,7 +1529,7 @@ const ordersModal   = $('ordersModal');
       fb.fs.collection('users').doc(uname).delete().catch(() => {});
     }
     allTickets = (allTickets || []).filter(t => (t.user || '').toLowerCase() !== uname);
-    renderOwner('users');
+    renderOwnerUsers();
     renderTickSidebar && renderTickSidebar(allTickets);
     showToast(username + ' deleted');
   };
@@ -2941,23 +3283,95 @@ setInterval(refreshLiveStore, 2000);
     renderOrders();
     ordersModal.classList.remove('hidden');
   }
+  /* ─────────── Order Expiry & Auto-Cleanup Logic ─────────── */
+  function getOrderExpiryTime(o) {
+    if (!o) return null;
+    if (o.expiresAt && typeof o.expiresAt === 'number') return o.expiresAt;
+    if (o.expires) {
+      if (typeof o.expires === 'number') return o.expires;
+      const str = String(o.expires).trim();
+      if (str.toLowerCase() === 'permanent' || str.toLowerCase() === 'lifetime') return Infinity;
+      const parsed = Date.parse(str.replace(' ', 'T'));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    // Infer duration from item string (e.g. "Panel · 7 Days") or o.duration
+    const durStr = o.duration || (o.item && o.item.includes('·') ? o.item.split('·').pop().trim() : '');
+    if (durStr) {
+      const d = durStr.toLowerCase();
+      if (d.includes('permanent') || d.includes('lifetime')) return Infinity;
+      const base = o.deliveredAt || o.acceptedAt || o.ts || Date.now();
+      if (d.includes('1 hour')) return base + 1 * 3600 * 1000;
+      if (d.includes('12 hour')) return base + 12 * 3600 * 1000;
+      if (d.includes('1 day')) return base + 24 * 3600 * 1000;
+      if (d.includes('7 day')) return base + 7 * 86400 * 1000;
+      if (d.includes('10 day')) return base + 10 * 86400 * 1000;
+      if (d.includes('15 day')) return base + 15 * 86400 * 1000;
+      if (d.includes('25 day')) return base + 25 * 86400 * 1000;
+      if (d.includes('30 day')) return base + 30 * 86400 * 1000;
+    }
+    return null;
+  }
+
+  // 1 Day grace after expiration (auto-deleted on 2nd day)
+  const ORDER_EXPIRY_GRACE_MS = 24 * 60 * 60 * 1000;
+
+  function purgeExpiredOrders() {
+    const orders = loadOrders();
+    const now = Date.now();
+    const active = orders.filter(o => {
+      const expTime = getOrderExpiryTime(o);
+      if (!expTime || expTime === Infinity) return true; // Keep permanent or pending
+      // If now is strictly beyond expiration + 24h grace window, purge it
+      if (now >= expTime + ORDER_EXPIRY_GRACE_MS) {
+        return false;
+      }
+      return true;
+    });
+    if (active.length !== orders.length) {
+      saveOrders(active);
+    }
+    return active;
+  }
+
   function renderOrders() {
-    const orders = loadOrders()
+    const orders = purgeExpiredOrders()
       .filter(o => o.user === currentUser.username)
       .sort((a, b) => b.ts - a.ts);
     if (!orders.length) {
       ordersList.innerHTML = '<p class="orders-empty">No orders yet</p>';
       return;
     }
+    const now = Date.now();
     ordersList.innerHTML = orders.map(o => {
       const st = String(o.status || 'pending').toLowerCase();
       const stLabel = st.toUpperCase();
+      const expTime = getOrderExpiryTime(o);
+      const hasKey = !!(o.panelUser || o.panelPass || (o.details && o.type === 'panel') || o.expires);
+
+      let keyStatusBadge = '';
+      if (hasKey && expTime) {
+        if (expTime === Infinity) {
+          keyStatusBadge = `<span class="badge-key-status badge-active">🟢 ACTIVE · LIFETIME</span>`;
+        } else if (now < expTime) {
+          const leftMs = expTime - now;
+          const days = Math.floor(leftMs / (24 * 3600 * 1000));
+          const hrs = Math.floor((leftMs % (24 * 3600 * 1000)) / 3600000);
+          const timeLabel = days > 0 ? `${days}d ${hrs}h left` : `${hrs}h left`;
+          keyStatusBadge = `<span class="badge-key-status badge-active">🟢 ACTIVE · ${timeLabel}</span>`;
+        } else {
+          keyStatusBadge = `<span class="badge-key-status badge-expired">🔴 EXPIRED</span>`;
+        }
+      }
+
       return `
         <div class="order-item col">
           <div class="order-main">
             <img src="${o.img || ''}" alt="" class="order-img" onerror="this.style.display='none'">
             <div class="order-info">
-              <strong>${o.item}</strong>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <strong>${escapeHtml(o.item)}</strong>
+                ${keyStatusBadge}
+              </div>
               <small>${o.id} · ${currentUser.uid || ''} · ${new Date(o.ts).toLocaleString('en-IN', { day: '2-digit', month: 'short' })}</small>
             </div>
             <div class="order-right">
@@ -2969,14 +3383,18 @@ setInterval(refreshLiveStore, 2000);
           ${o.details ? `
             <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
-                <b>${o.type === 'panel' ? (o.isPc ? '💻 PC LOGIN CREDENTIALS:' : '🔑 PANEL KEY:') : 'CARD DETAILS:'}</b>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <b>${o.type === 'panel' ? (o.isPc ? '💻 PC LOGIN CREDENTIALS:' : '🔑 PANEL KEY:') : 'CARD DETAILS:'}</b>
+                  ${keyStatusBadge}
+                </div>
                 ${o.panelUser && o.panelPass ? `
                   <div style="margin-top:4px; font-size:12.5px;">
-                    <div>User: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.panelUser}</span></div>
-                    <div style="margin-top:2px;">Pass: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.panelPass}</span></div>
+                    <div>User: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${escapeHtml(o.panelUser)}</span></div>
+                    <div style="margin-top:2px;">Pass: <span class="mono" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-weight:700; user-select:all;">${escapeHtml(o.panelPass)}</span></div>
                   </div>
-                ` : `<span class="mono" style="background:rgba(0,0,0,0.4); padding:3px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.details}</span>`}
-                ${o.expires ? `<small style="display:block; color:#9da6be; margin-top:3px;">Expires: ${o.expires}</small>` : ''}
+                ` : `<span class="mono" style="background:rgba(0,0,0,0.4); padding:3px 6px; border-radius:4px; font-weight:700; user-select:all;">${escapeHtml(o.details)}</span>`}
+                ${o.expires ? `<small style="display:block; color:#9da6be; margin-top:3px;">Expiry Date: ${escapeHtml(String(o.expires))}</small>` : ''}
+                ${expTime && expTime !== Infinity && now >= expTime ? `<small style="display:block; color:#ff6b6b; margin-top:2px; font-weight:700;">⚠️ Key expire ho chuka hai. 24 hours baad ye order auto-delete ho jayega.</small>` : ''}
               </div>
               <div style="display:flex; gap:5px;">
                 ${o.panelUser && o.panelPass ? `
@@ -3068,10 +3486,26 @@ setInterval(refreshLiveStore, 2000);
     openRzp(txn);
   });
 
-  /* ─────────── Transactions ─────────── */
+  /* ─────────── Transactions (30-Day Auto-Cleanup) ─────────── */
+  const TXN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 Days
+
+  function purgeOldTxns() {
+    const all = loadTxns();
+    const now = Date.now();
+    const fresh = all.filter(t => {
+      const time = t.createdAt || t.ts || now;
+      return (now - time) <= TXN_RETENTION_MS;
+    });
+    if (fresh.length !== all.length) {
+      saveTxns(fresh);
+    }
+    return fresh;
+  }
+
   function getMyTxns() {
     if (!currentUser) return [];
-    return loadTxns().filter(t => t.user === currentUser.username).sort((a, b) => b.createdAt - a.createdAt);
+    const all = purgeOldTxns();
+    return all.filter(t => t.user === currentUser.username).sort((a, b) => (b.createdAt || b.ts || 0) - (a.createdAt || a.ts || 0));
   }
 
   function renderTxns() {

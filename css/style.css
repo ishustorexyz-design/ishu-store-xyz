@@ -1688,3 +1688,477 @@ body::before {
   .support-nav-btns { flex-wrap: wrap; }
 }
 
+/* ───────────── FOOTER SOCIAL COMMUNITY CHIPS ───────────── */
+.footer-social-box {
+  max-width: 600px;
+  margin: 0 auto 16px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+.footer-social-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #ffd700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.footer-chips {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.social-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+.social-chip .social-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.social-chip.discord {
+  background: rgba(88, 101, 242, 0.12);
+  border: 1px solid rgba(88, 101, 242, 0.45);
+  color: #9ba8ff;
+}
+.social-chip.discord:hover {
+  background: #5865F2;
+  color: #fff;
+  border-color: #5865F2;
+  box-shadow: 0 4px 18px rgba(88, 101, 242, 0.45);
+  transform: translateY(-2px);
+}
+.social-chip.telegram {
+  background: rgba(34, 158, 217, 0.12);
+  border: 1px solid rgba(34, 158, 217, 0.45);
+  color: #38bdf8;
+}
+.social-chip.telegram:hover {
+  background: #0284c7;
+  color: #fff;
+  border-color: #0284c7;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.45);
+  transform: translateY(-2px);
+}
+.social-chip.telegram-dm {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  color: #ffd700;
+}
+.social-chip.telegram-dm:hover {
+  background: #ffd700;
+  color: #0b0e17;
+  border-color: #ffd700;
+  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ───────────── SUPPORT MODAL DIRECT CHANNELS ───────────── */
+.support-direct-channels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.sdc-label {
+  font-size: 11px;
+  color: #9da6be;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.sdc-links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sdc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.sdc-btn.discord {
+  background: rgba(88, 101, 242, 0.18);
+  color: #a5b4fc;
+  border: 1px solid rgba(88, 101, 242, 0.35);
+}
+.sdc-btn.discord:hover { background: #5865F2; color: #fff; }
+.sdc-btn.telegram {
+  background: rgba(34, 158, 217, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(34, 158, 217, 0.35);
+}
+.sdc-btn.telegram:hover { background: #0284c7; color: #fff; }
+.sdc-btn.telegram-dm {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.35);
+}
+.sdc-btn.telegram-dm:hover { background: #ffd700; color: #0b0e17; }
+
+/* ───────────── 30-DAY AUTO-CLEANUP WARNING NOTICE ───────────── */
+.txn-retention-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e5e7eb;
+}
+.txn-retention-notice .notice-icon {
+  color: #fbbf24;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.txn-retention-notice strong {
+  display: block;
+  color: #fbbf24;
+  font-size: 12.5px;
+  margin-bottom: 2px;
+}
+
+/* ───────────── ORDER KEY STATUS BADGES (ACTIVE / EXPIRED) ───────────── */
+.badge-key-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.badge-active {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+.badge-expired {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  animation: pulseExpired 2s infinite;
+}
+@keyframes pulseExpired {
+  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+}
+
+/* ───────────── OWNER USER MANAGEMENT & BIODATA ───────────── */
+.owner-user-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.owner-user-search {
+  flex: 1 1 240px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.owner-user-search .ous-icon {
+  position: absolute;
+  left: 12px;
+  color: #8b92a7;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+.owner-user-search input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 36px 9px 36px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.owner-user-search input:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+}
+.owner-user-search .ous-clear {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #8b92a7;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+}
+.ous-counter {
+  font-size: 12px;
+  color: #9da6be;
+  white-space: nowrap;
+}
+
+.owner-user-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.owner-user-card:hover {
+  border-color: rgba(255, 215, 0, 0.3);
+}
+.ouc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ouc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ouc-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #151928;
+  border: 1.5px solid #ffd700;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffd700;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.ouc-details strong {
+  display: block;
+  font-size: 14.5px;
+  color: #fff;
+}
+.ouc-id-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.ouc-uid-pill {
+  font-family: Consolas, Menlo, monospace;
+  font-size: 11px;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.ouc-badge-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.ouc-badge-tag.bronze { background: rgba(205, 127, 50, 0.2); color: #cd7f32; border: 1px solid rgba(205, 127, 50, 0.4); }
+.ouc-badge-tag.silver { background: rgba(192, 192, 192, 0.2); color: #e0e0e0; border: 1px solid rgba(192, 192, 192, 0.4); }
+.ouc-badge-tag.vip { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.5); }
+.ouc-badge-tag.premium { background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.5); }
+.ouc-badge-tag.banned { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); }
+
+.ouc-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.ouc-stat {
+  text-align: center;
+}
+.ouc-stat .val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  display: block;
+}
+.ouc-stat .val.gold { color: #ffd700; }
+.ouc-stat .val.green { color: #2ecc71; }
+.ouc-stat .lbl {
+  font-size: 10.5px;
+  color: #8b92a7;
+  text-transform: uppercase;
+  margin-top: 2px;
+  display: block;
+}
+
+.ouc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-credit {
+  background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+  color: #07110a !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
+.btn-credit:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);
+}
+.btn-debit {
+  background: linear-gradient(135deg, #e67e22, #d35400) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
+.btn-debit:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.35);
+}
+.btn-bio {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f3f4f6 !important;
+}
+.btn-bio:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* ───────────── BIODATA MODAL DETAIL VIEW ───────────── */
+.biodata-card {
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 22px 20px;
+}
+.bio-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.bio-av {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #111522;
+  border: 2px solid #ffd700;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffd700;
+  object-fit: cover;
+}
+.bio-meta h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+.bio-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.bio-sum-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.bio-sum-card .b-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffd700;
+  display: block;
+}
+.bio-sum-card .b-lbl {
+  font-size: 11px;
+  color: #8b92a7;
+  text-transform: uppercase;
+  margin-top: 4px;
+  display: block;
+}
+.bio-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffd700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bio-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.bio-table th, .bio-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.bio-table th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #9da6be;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+.bio-table tr:last-child td {
+  border-bottom: none;
+}
