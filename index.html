@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=31">
+<link rel="stylesheet" href="css/style.css?v=32">
 </head>
 <body>
 
@@ -50,7 +50,7 @@
       <h2 id="authTitle">Welcome Back</h2>
       <p class="login-sub" id="authSub">Access premium panels, cards & tools</p>
 
-      <div id="g_id_onload" data-client_id="PASTE_YOUR_GOOGLE_CLIENT_ID" data-login_uri="https://myapp.example.com" data-auto_prompt="false"></div>
+      <div id="g_id_onload" data-client_id="456607613890-k52do6laoke7i1e9qtoj2j3rv1rved1l.apps.googleusercontent.com" data-auto_prompt="false" data-callback="handleGoogleCredentialResponse"></div>
       <div id="googleButton" class="google-btn-wrap"></div>
 
       <div class="divider"><span>OR WITH ACCOUNT</span></div>
@@ -380,7 +380,10 @@
 
     <div id="panelMaterials" class="panel-materials hidden"></div>
 
-    <button id="confirmDurationBuy" class="btn btn-primary btn-block">Confirm Buy</button>
+    <button id="confirmDurationBuy" class="btn btn-primary btn-block btn-confirm-buy">
+      <img src="assets/img/shopping.png" alt="" class="btn-buy-png">
+      <span>Confirm Buy</span>
+    </button>
     <p class="modal-note" id="resellerOffNote">Premium VIP: 20% OFF applied</p>
   </div>
 </div>
@@ -560,6 +563,24 @@
   </div>
 </div>
 
+<!-- ═══════════ SUBTLE MOUSE GLOW ═══════════ -->
+<div id="cursorGlow" class="cursor-glow"></div>
+
+<!-- ═══════════ CUSTOM DESIGNED CONFIRMATION MODAL ═══════════ -->
+<div id="customConfirmModal" class="modal hidden">
+  <div class="modal-card confirm-dialog-card">
+    <div class="confirm-icon-wrap" id="confirmIconWrap">
+      <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 id="confirmDialogTitle">CONFIRM ACTION</h3>
+    <p id="confirmDialogMessage" class="confirm-dialog-msg">Are you sure you want to proceed?</p>
+    <div class="confirm-dialog-actions">
+      <button id="confirmCancelBtn" class="btn btn-ghost">Cancel</button>
+      <button id="confirmOkBtn" class="btn btn-primary">Yes, Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ SUCCESS TOAST ═══════════ -->
 <div id="toast" class="toast hidden"></div>
 
@@ -570,6 +591,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=42"></script>
+<script src="js/app.js?v=43"></script>
 </body>
 </html>

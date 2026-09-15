@@ -859,28 +859,98 @@ const ordersModal   = $('ordersModal');
     }
   }
 
-  /* Google login (placeholder client-id) */
-  if (window.google?.accounts?.id) {
-    window.google.accounts.id.initialize({
-      client_id: 'PASTE_YOUR_GOOGLE_CLIENT_ID',
-      callback: (resp) => {
-        const name = (resp.name || resp.email || 'googleuser').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const users = loadUsers();
-        if (users[name] && users[name].banned) { showToast('This account has been banned'); return; }
-        if (!users[name]) {
-          currentUser = { username: name, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: name, pass: '', email: resp.email || '', photo: resp.picture || '', wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now() };
-          saveUsers({ ...users, [name]: currentUser });
-        } else {
-          currentUser = users[name];
-        }
-        enterStore();
-      }
-    });
-    window.google.accounts.id.renderButton(
-      document.getElementById('googleButton'),
-      { theme: 'outline', size: 'large', width: '100%', text: 'signin_with' }
-    );
+  /* ─────────── Google Sign-In (OAuth 2.0) ─────────── */
+  const GOOGLE_CLIENT_ID = '456607613890-k52do6laoke7i1e9qtoj2j3rv1rved1l.apps.googleusercontent.com';
+
+  function parseJwt(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch(e) {
+      return null;
+    }
   }
+
+  window.handleGoogleCredentialResponse = function(resp) {
+    if (!resp || !resp.credential) return;
+    const data = parseJwt(resp.credential);
+    if (!data) { showToast('Google sign-in failed'); return; }
+
+    const email = (data.email || '').toLowerCase();
+    const displayName = data.name || email.split('@')[0] || 'Google User';
+    const cleanUsername = (email.split('@')[0] || displayName).toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) || ('guser_' + Date.now().toString().slice(-4));
+    const photo = data.picture || '';
+
+    const users = loadUsers();
+    let u = users[cleanUsername] || Object.values(users).find(x => (x.email || '').toLowerCase() === email);
+
+    if (u && u.banned) {
+      showToast('This account has been banned');
+      return;
+    }
+
+    if (!u) {
+      u = {
+        username: cleanUsername,
+        uid: 'USR-' + Date.now().toString(36).toUpperCase(),
+        name: displayName,
+        pass: '',
+        email,
+        photo,
+        wallet: 0,
+        deposits: 0,
+        premiumUntil: 0,
+        purchases: 0,
+        banned: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      saveUsers({ ...users, [cleanUsername]: u });
+    } else {
+      if (photo && !u.photo) u.photo = photo;
+      if (email && !u.email) u.email = email;
+      if (displayName && !u.name) u.name = displayName;
+      saveUsers(users);
+    }
+
+    currentUser = u;
+    localStorage.setItem(SESSION_USER_KEY, currentUser.username.toLowerCase());
+    showToast(`Signed in as ${u.name || u.username} ✓`);
+    enterStore();
+  };
+
+  function initGoogleAuth() {
+    if (!window.google?.accounts?.id) {
+      setTimeout(initGoogleAuth, 250);
+      return;
+    }
+    try {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: window.handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      const gBtn = document.getElementById('googleButton');
+      if (gBtn) {
+        gBtn.innerHTML = '';
+        window.google.accounts.id.renderButton(gBtn, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'signin_with',
+          shape: 'pill'
+        });
+      }
+    } catch(err) {
+      console.warn('Google Auth Init error:', err);
+    }
+  }
+  initGoogleAuth();
 
   /* ─────────── Enter store ─────────── */
   function enterStore() {
@@ -1318,7 +1388,7 @@ const ordersModal   = $('ordersModal');
     showToast(`✅ ₹${amt} successfully credited to ${u.username}! Balance: ₹${u.wallet}`);
   };
 
-  window.__ownerDebitBalance = usernameOrUid => {
+  window.__ownerDebitBalance = async usernameOrUid => {
     const users = loadUsers();
     const u = findTargetUser(users, usernameOrUid);
     if (!u) { showToast('User not found'); return; }
@@ -1339,9 +1409,11 @@ const ordersModal   = $('ordersModal');
 
     const currentWal = u.wallet || 0;
     if (currentWal < amt) {
-      if (!confirm(`Warning: User ke pass sirf ₹${currentWal} hain. Debit karne se balance negative (-₹${amt - currentWal}) ho jayega. Kya aap continue karna chahte hain?`)) {
-        return;
-      }
+      const proceed = await window.customConfirm(
+        `User ke pass sirf <b>₹${currentWal}</b> hain.<br>Debit karne se balance negative (<b>-₹${amt - currentWal}</b>) ho jayega.<br>Kya aap continue karna chahte hain?`,
+        { title: 'NEGATIVE BALANCE WARNING', okText: 'Proceed Debit', danger: true }
+      );
+      if (!proceed) return;
     }
 
     const reason = prompt('Debit reason/note (optional):', 'Manual Admin Debit') || 'Admin Debit';
@@ -1527,11 +1599,17 @@ const ordersModal   = $('ordersModal');
     showToast(u.banned ? username + ' banned' : username + ' unbanned');
   };
 
-  window.__ownerDel = username => {
+  window.__ownerDel = async username => {
     const uname = (username || '').toLowerCase();
     const users = loadUsers();
     if (!users[uname] && !users[username]) return;
-    if (!confirm('Isse delete kar do: ' + username + '?\nUske wallet, tickets, orders sab remove ho jayenge. Ye permanently hai.')) return;
+
+    const confirmed = await window.customConfirm(
+      `Isse delete kar do: <b>${escapeHtml(username)}</b>?<br>Uske wallet, tickets, orders sab remove ho jayenge. Ye permanently hai.`,
+      { title: 'DELETE USER ACCOUNT', okText: 'Yes, Delete Permanently', danger: true }
+    );
+    if (!confirmed) return;
+
     delete users[uname];
     delete users[username];
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -3047,7 +3125,7 @@ setInterval(refreshLiveStore, 2000);
             <h3>${p.name}</h3>
             <p class="tile-sub">${p.tag ? p.tag + ' mod panel' : 'PC premium panel'}</p>
             <div class="price-row">
-              <span class="vendor-tag">${maint ? 'TEMPORARILY UNAVAILABLE' : (off ? fmt(price) + ' (was ' + fmt(base1h) + ')' : '1 HR — ' + fmt(base1h))}</span>
+              <span class="vendor-tag"><img src="assets/img/shopping.png" alt="" class="price-buy-png">${maint ? 'TEMPORARILY UNAVAILABLE' : (off ? fmt(price) + ' (was ' + fmt(base1h) + ')' : '1 HR — ' + fmt(base1h))}</span>
             </div>
             ${matsT.length && !maint ? `<div class="tile-mats">${matsT.map((m, mi) => {
         const ico = m.iconUrl || m.icon || '';
@@ -3055,8 +3133,8 @@ setInterval(refreshLiveStore, 2000);
       }).join('')}</div>` : ''}
             ${maint
               ? `<button class="btn btn-sm btn-maint" disabled>Under Maintenance</button>`
-              : `<button class="btn btn-primary btn-sm" onclick="window.buyItem('${p.name}','panel','${p.img}')">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 13H7L6 7zM9 7a3 3 0 0 1 6 0"/></svg>
+              : `<button class="btn btn-primary btn-sm btn-buy" onclick="window.buyItem('${p.name}','panel','${p.img}')">
+              <img src="assets/img/shopping.png" alt="Buy" class="btn-buy-png">
               Buy
             </button>`}
           </div>
@@ -3081,12 +3159,12 @@ setInterval(refreshLiveStore, 2000);
             <h3>${c.name}</h3>
             <p class="tile-sub">Balance: ${fmt(c.minBal)} — ${fmt(c.maxBal)}</p>
             <div class="price-row">
-              <span class="vendor-tag">${sold ? 'SOLD OUT — wapas kal aayega' : fmt(c.price)}</span>
+              <span class="vendor-tag"><img src="assets/img/shopping.png" alt="" class="price-buy-png">${sold ? 'SOLD OUT — wapas kal aayega' : fmt(c.price)}</span>
             </div>
             ${sold
               ? `<button class="btn btn-primary btn-sm btn-maint" disabled>Sold Out</button>`
               : `<button class="btn btn-primary btn-sm btn-buy" onclick="window.buyItem('${c.name}','card','${img}','${c.price}')">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              <img src="assets/img/shopping.png" alt="Buy" class="btn-buy-png">
               Buy
             </button>`}
           </div>
@@ -3127,7 +3205,7 @@ setInterval(refreshLiveStore, 2000);
       return `
         <button class="duration-item ${i === 0 ? 'selected' : ''}" data-idx="${i}">
           <span class="dur-name">${dur}</span>
-          <span class="dur-price">${fmt(shown)}${off ? ' <small class="disc">' + fmt(pr) + '</small>' : ''}</span>
+          <span class="dur-price"><img src="assets/img/shopping.png" alt="" class="dur-buy-png">${fmt(shown)}${off ? ' <small class="disc">' + fmt(pr) + '</small>' : ''}</span>
         </button>`;
     }).join('');
 
@@ -3182,7 +3260,7 @@ setInterval(refreshLiveStore, 2000);
 
     if (isPc) {
       confirmDurationBuy.disabled = true;
-      confirmDurationBuy.textContent = 'Generating PC Key...';
+      confirmDurationBuy.innerHTML = '<img src="assets/img/shopping.png" alt="" class="btn-buy-png"> <span>Generating PC Key...</span>';
       showToast('IshuAuth se live PC key generate ho rahi hai...');
 
       // Map duration to KeyAuth format
@@ -3219,7 +3297,7 @@ setInterval(refreshLiveStore, 2000);
       .then(r => r.json())
       .then(data => {
         confirmDurationBuy.disabled = false;
-        confirmDurationBuy.textContent = 'Confirm Buy';
+        confirmDurationBuy.innerHTML = '<img src="assets/img/shopping.png" alt="" class="btn-buy-png"> <span>Confirm Buy</span>';
         if (data && data.ok) {
           currentUser.wallet = wal - cost;
           currentUser.purchases = (currentUser.purchases || 0) + 1;
@@ -3255,7 +3333,7 @@ setInterval(refreshLiveStore, 2000);
       .catch(err => {
         console.warn('IshuAuth generation fallback:', err);
         confirmDurationBuy.disabled = false;
-        confirmDurationBuy.textContent = 'Confirm Buy';
+        confirmDurationBuy.innerHTML = '<img src="assets/img/shopping.png" alt="" class="btn-buy-png"> <span>Confirm Buy</span>';
         currentUser.wallet = wal - cost;
         currentUser.purchases = (currentUser.purchases || 0) + 1;
         saveOrder({ type: 'panel', isPc: true, item: fullItem, price: cost, img: payload.img, status: 'pending', charged: cost });
@@ -3853,14 +3931,103 @@ setInterval(refreshLiveStore, 2000);
     preloader.classList.remove('fade-out');
   };
 
-  window.hideAppLoading = function() {
-    hidePreloader();
+  /* ─────────── Custom Confirm Dialog (Replaces native browser popup) ─────────── */
+  window.customConfirm = function(msg, options = {}) {
+    return new Promise(resolve => {
+      const modal = document.getElementById('customConfirmModal');
+      const titleEl = document.getElementById('confirmDialogTitle');
+      const msgEl = document.getElementById('confirmDialogMessage');
+      const okBtn = document.getElementById('confirmOkBtn');
+      const cancelBtn = document.getElementById('confirmCancelBtn');
+      const iconWrap = document.getElementById('confirmIconWrap');
+
+      if (!modal) {
+        resolve(window.confirm(msg));
+        return;
+      }
+
+      const title = typeof options === 'string' ? options : (options.title || 'CONFIRM ACTION');
+      const okText = options.okText || 'Yes, Confirm';
+      const cancelText = options.cancelText || 'Cancel';
+      const isDanger = options.danger !== false;
+
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = String(msg).replace(/\n/g, '<br>');
+      if (okBtn) okBtn.textContent = okText;
+      if (cancelBtn) cancelBtn.textContent = cancelText;
+
+      if (iconWrap) {
+        iconWrap.className = isDanger ? 'confirm-icon-wrap danger' : 'confirm-icon-wrap';
+      }
+      if (okBtn) {
+        okBtn.className = isDanger ? 'btn btn-cancel' : 'btn btn-primary';
+      }
+
+      modal.classList.remove('hidden');
+
+      const cleanup = val => {
+        modal.classList.add('hidden');
+        okBtn && okBtn.removeEventListener('click', onOk);
+        cancelBtn && cancelBtn.removeEventListener('click', onCancel);
+        resolve(val);
+      };
+
+      const onOk = () => cleanup(true);
+      const onCancel = () => cleanup(false);
+
+      okBtn && okBtn.addEventListener('click', onOk);
+      cancelBtn && cancelBtn.addEventListener('click', onCancel);
+    });
   };
+
+  /* ─────────── Subtle Mouse Cursor Glow & Click Ripple ─────────── */
+  function initCursorGlow() {
+    const glow = document.getElementById('cursorGlow');
+    if (!glow || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let mouseX = -9999, mouseY = -9999;
+    let currentX = -9999, currentY = -9999;
+    let isMoving = false;
+
+    window.addEventListener('mousemove', e => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      if (!isMoving) {
+        glow.classList.add('active');
+        isMoving = true;
+      }
+    }, { passive: true });
+
+    window.addEventListener('mouseleave', () => {
+      glow.classList.remove('active');
+      isMoving = false;
+    });
+
+    window.addEventListener('mousedown', e => {
+      const ripple = document.createElement('div');
+      ripple.className = 'cursor-ripple';
+      ripple.style.left = e.clientX + 'px';
+      ripple.style.top = e.clientY + 'px';
+      document.body.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 480);
+    }, { passive: true });
+
+    function animateGlow() {
+      if (isMoving) {
+        currentX += (mouseX - currentX) * 0.16;
+        currentY += (mouseY - currentY) * 0.16;
+        glow.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      }
+      requestAnimationFrame(animateGlow);
+    }
+    requestAnimationFrame(animateGlow);
+  }
 
   /* ─────────── Init ─────────── */
   fbInit();
   setAuthMode('login');
   renderGrid();
+  initCursorGlow();
 
   const sessionActive = restoreSavedSession();
   if (!sessionActive) {
