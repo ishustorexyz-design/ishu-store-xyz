@@ -799,6 +799,7 @@ const ordersModal   = $('ordersModal');
           <span>${(u.purchases || 0)} buys</span>
         </div>
         <button class="btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}" onclick="window.__ownerBan('${u.username}')">${u.banned ? 'Unban' : 'Ban'}</button>
+        <button class="btn btn-sm btn-del" onclick="window.__ownerDel('${u.username}')">Delete</button>
       </div>`).join('') || '<div class="empty-state">No users yet</div>';
   }
 
@@ -810,6 +811,22 @@ const ordersModal   = $('ordersModal');
     saveUsers(users);
     renderOwner('users');
     showToast(u.banned ? username + ' banned' : username + ' unbanned');
+  };
+
+  window.__ownerDel = username => {
+    const users = loadUsers();
+    if (!users[username]) return;
+    if (!confirm('Isse delete kar do: ' + username + '?\nUske wallet, tickets, orders sab remove ho jayenge. Ye permanently hai.')) return;
+    delete users[username];
+    saveUsers(users);
+    if (fb.ok) {
+      fb.db.ref('users/' + username).remove().catch(() => {});
+      fb.db.ref('tickets/' + username).remove().catch(() => {});
+    }
+    allTickets = (allTickets || []).filter(t => t.user !== username);
+    renderOwner('users');
+    renderTickSidebar && renderTickSidebar(allTickets);
+    showToast(username + ' deleted');
   };
 
   /* ─────────── OWNER: ORDERS ─────────── */
