@@ -1533,6 +1533,8 @@ function newTicketReset() {
       if (pendingAtt && pendingAtt.el === wrap) {
         st.textContent = 'Upload fail';
         st.classList.add('err');
+        window.setTimeout(() => { if (pendingAtt && pendingAtt.el === wrap) clearPendingAtt(); }, 2500);
+        showToast('Upload fail — phir try karo, ya bina file bhej do');
       }
     });
   }
@@ -1554,9 +1556,18 @@ function newTicketReset() {
     ownerTickUnsub = ticketsCol().orderBy('lastUpdated', 'desc').onSnapshot(snap => {
       const list = [];
       snap.forEach(d => list.push(Object.assign({ id: d.id }, d.data())));
-      allTickets = list;
-      if (!ownerSvc.classList.contains('hidden') && !activeSvcTicket) renderTickSidebar(list);
-      checkOwnerAlerts(list);
+      /* OLD RESOLVED AUTO-CLEANUP: RESOLVED tickets ka koi kaam nahi — cloud se purge */
+      list.forEach(t => {
+        if (t.status !== 'RESOLVED' || t.id === activeSvcTicket) return;
+        ticketMsgs(t.id).get().then(snaps => {
+          const dels = [];
+          snaps.forEach(s => dels.push(s.ref.delete().catch(() => {})));
+          return Promise.all(dels).then(() => ticketDoc(t.id).delete().catch(() => {}));
+        }).catch(() => {});
+      });
+      allTickets = list.filter(t => t.status !== 'RESOLVED' || t.id === activeSvcTicket);
+      if (!ownerSvc.classList.contains('hidden') && !activeSvcTicket) renderTickSidebar(allTickets);
+      checkOwnerAlerts(allTickets);
     }, err => console.warn('tick snap', err));
   }
 
