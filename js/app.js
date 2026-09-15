@@ -471,50 +471,18 @@ const ordersModal   = $('ordersModal');
       return;
     }
 
-    /* CROSS-DEVICE RECONCILE: cloud ka account = canonical (USR-MU1A3OMD jaisa single UID dono devices pe).
-       Phone ke purane duplicate ko local se delete kar dete hain, wallet/deposits ka MAX merge karke. */
-    const doEnter = uu => { if (!uu.uid) uu.uid = 'USR-' + Date.now().toString(36).toUpperCase(); currentUser = uu; enterStore(); };
     const u = users[username];
-    if (fb.ok) {
-      showToast('Syncing account with cloud...');
-      fb.db.ref('users/' + username).once('value').then(snap => {
-        const r = snap.val();
-        if (r && r.banned) { showToast('This account has been banned'); return; }
-        if (r && r.pass !== pass) { showToast('Wrong password'); return; }
-        if (r) {
-          /* cloud se canonical, local se sirf wallet/deposits ka max */
-          const merged = Object.assign({}, r);
-          if (u) {
-            merged.wallet = Math.max(r.wallet || 0, u.wallet || 0);
-            merged.deposits = Math.max(r.deposits || 0, u.deposits || 0);
-            merged.purchases = Math.max(r.purchases || 0, u.purchases || 0);
-          }
-          if (!merged.uid) merged.uid = 'USR-' + Date.now().toString(36).toUpperCase();
-          merged.updatedAt = Date.now();
-          const all = loadUsers(); all[username] = merged; saveUsers(all);
-          fb.db.ref('users/' + username).update(merged).catch(() => {});
-          doEnter(merged);
-          return;
-        }
-        /* cloud me nahi - local se lo aur usko cloud canonical bana do (taaki phone bhi same UID dekhe) */
-        if (!u) { showToast('No account found - register first'); setAuthMode('register'); return; }
-        if (u.pass !== pass) { showToast('Wrong password'); return; }
-        doEnter(u);
-        fb.db.ref('users/' + username).set(u).catch(() => {});
-        return;
-      }).catch(() => {
-        /* offline: local se */
-        if (!u) { showToast('No account found - register first'); setAuthMode('register'); return; }
-        if (u.pass !== pass) { showToast('Wrong password'); return; }
-        doEnter(u);
-      });
-      return;
-    }
-    /* firebase off: sirf local */
-    if (!u) { showToast('No account found - register first'); setAuthMode('register'); return; }
-    if (u.pass !== pass) { showToast('Wrong password'); return; }
-    if (u.banned) { showToast('This account has been banned'); return; }
-    doEnter(u);
+    if (!u) {
+      if (fb.ok) {
+        showToast('Checking cloud account...');
+        fb.db.ref('users/' + username).once('value').then(snap => {
+          const r = snap.val();
+          if (!r) { showToast('No account found — register first'); setAuthMode('register'); return; }
+          if (r.banned) { showToast('This account has been banned'); return; }
+          const nu = Object.assign({}, r); nu.updatedAt = Date.now();
+          const all = loadUsers(); all[username] = nu; localStorage.setItem(USERS_KEY, JSON.stringify(all));
+          currentUser = nu;
+          enterStore();
         }).catch(() => { showToast('No account found — register first'); setAuthMode('register'); });
         return;
       }
