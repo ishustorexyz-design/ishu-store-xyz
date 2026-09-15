@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const openDepositBtn = $('openDepositBtn');
   const openOrdersBtn  = $('openOrdersBtn');
   const pcAvatar       = $('pcAvatar');
-  const pcBadgeImg     = $('pcBadgeImg');
   const pcCam          = $('pcCam');
   const dpFile         = $('dpFile');
   const pcBadgeLink    = $('pcBadgeLink');
@@ -516,7 +515,6 @@ const ordersModal   = $('ordersModal');
     if (ddBadgeImg) { ddBadgeImg.src = bImg; ddBadgeImg.classList.remove('hidden'); }
     navBadgeImg.src = bImg;
     navBadgeImg.classList.remove('hidden');
-    if (pcBadgeImg) pcBadgeImg.src = bImg;
     if (pcBadgeLink) pcBadgeLink.textContent = '🏅 ' + (BADGE_NAME[badge] || 'VIP');
 
     updateBalances();
@@ -1708,9 +1706,7 @@ setInterval(refreshLiveStore, 2000);
         <div class="tile ${maint ? 'tile-maint' : ''}" ${maint ? `onclick="window.__maintClick()"` : ''}>
           <div class="tile-img-wrap">
             <img src="${editImg(p.name, p.img)}" alt="${p.name}" loading="lazy">
-            ${panelVid && !maint ? `<button class="tile-play" title="Panel demo dekho" onclick="event.stopPropagation(); window.__playPanelVideo('${p.name.replace(/'/g, "\\'")}')">
-              <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            </button>` : ''}
+            ${panelVid && !maint ? `<button class="tile-play" title="Panel demo dekho" onclick="event.stopPropagation(); window.__playPanelVideo('${p.name.replace(/'/g, "\\'")}')"></button>` : ''}
             ${p.tag ? `<span class="tile-tag">${p.tag}</span>` : ''}
             ${off && !maint ? `<span class="tile-tag gold">20% OFF</span>` : ''}
             ${maint ? `
@@ -2113,20 +2109,28 @@ setInterval(refreshLiveStore, 2000);
     if (hit && hit.status === 'pending') {
       hit.received = true;
       hit.utr = utr;
-      if (shot) {
-        const ssKey = 'ss_' + hit.id.toLowerCase();
-        try { await filePut(ssKey, shot); hit.ss = shot.name; hit.ssKey = ssKey; }
-        catch(e) { showToast('Screenshot save failed'); }
-        if (fb.ok) {
-          try {
-            const url = await fbUpload('ss/' + hit.id.toLowerCase() + '/' + Date.now() + '_' + shot.name, shot);
-            if (url) hit.ssUrl = url;
-          } catch (e) { console.warn('FB ss upload fail', e); }
-        }
-      }
+      if (shot) hit.ss = shot.name;
       saveTxns(all);
       renderTxns();
       showToast('UTR + screenshot sent — admin verify kar ke credit karega ✓');
+      if (shot) {
+        const ssKey = 'ss_' + hit.id.toLowerCase();
+        filePut(ssKey, shot).then(() => {
+          const list = loadTxns();
+          const rec = list.find(t => t.id === hit.id);
+          if (rec) { rec.ssKey = ssKey; saveTxns(list); }
+        }).catch(e => console.warn('Screenshot save failed', e));
+        if (fb.ok) {
+          fbUpload('ss/' + hit.id.toLowerCase() + '/' + Date.now() + '_' + shot.name, shot)
+            .then(url => {
+              if (url) {
+                const list = loadTxns();
+                const rec = list.find(t => t.id === hit.id);
+                if (rec) { rec.ssUrl = url; saveTxns(list); }
+              }
+            }).catch(e => console.warn('FB ss upload fail', e));
+        }
+      }
     }
   };
 
