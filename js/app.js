@@ -2826,6 +2826,90 @@ setInterval(refreshLiveStore, 2000);
       openDeposit();
       return;
     }
+    const isPc = PC_PANELS.some(p => p.name === payload.name);
+
+    if (isPc) {
+      confirmDurationBuy.disabled = true;
+      confirmDurationBuy.textContent = 'Generating PC Key...';
+      showToast('IshuAuth se live PC key generate ho rahi hai...');
+
+      // Map duration to KeyAuth format
+      let durParam = '24h';
+      let untilParam = null;
+      if (idx === 0) durParam = '1h';
+      else if (idx === 1) durParam = '12h';
+      else if (idx === 2) durParam = '24h';
+      else if (idx === 3) durParam = '7d';
+      else if (idx === 4) untilParam = Date.now() + 10 * 86400000;
+      else if (idx === 5) untilParam = Date.now() + 15 * 86400000;
+      else if (idx === 6) untilParam = Date.now() + 25 * 86400000;
+      else if (idx === 7) durParam = '30d';
+      else if (idx === 8) durParam = 'permanent';
+
+      const uniqueUser = (currentUser.username + '_' + Date.now().toString(36)).slice(0, 30);
+      const reqBody = {
+        key: 'ISHU_fina-Klv1-U4cv-mYUT-714O-Dl5Y-4ABo-ICeF',
+        appid: 'APP-1LHEK3',
+        username: uniqueUser,
+        type: 'license',
+        duration: durParam
+      };
+      if (untilParam) reqBody.until = untilParam;
+
+      fetch('https://keyuth-web.onrender.com/api/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqBody)
+      })
+      .then(r => r.json())
+      .then(data => {
+        confirmDurationBuy.disabled = false;
+        confirmDurationBuy.textContent = 'Confirm Buy';
+        if (data && data.ok && data.license_key) {
+          currentUser.wallet = wal - cost;
+          currentUser.purchases = (currentUser.purchases || 0) + 1;
+          saveOrder({
+            type: 'panel',
+            isPc: true,
+            item: fullItem,
+            price: cost,
+            img: payload.img,
+            status: 'success',
+            details: data.license_key,
+            expires: data.expires || '',
+            charged: cost
+          });
+          commit();
+          renderProfile();
+          closeAllModals();
+          openOrders();
+          showToast('🎉 PC Panel Key Generated! Orders me check karein');
+        } else {
+          // Fallback: place pending order if server busy
+          currentUser.wallet = wal - cost;
+          currentUser.purchases = (currentUser.purchases || 0) + 1;
+          saveOrder({ type: 'panel', isPc: true, item: fullItem, price: cost, img: payload.img, status: 'pending', charged: cost });
+          commit();
+          renderProfile();
+          closeAllModals();
+          showToast('Order placed — KeyAuth offline hone par admin key bhejega');
+        }
+      })
+      .catch(err => {
+        console.warn('IshuAuth generation fallback:', err);
+        confirmDurationBuy.disabled = false;
+        confirmDurationBuy.textContent = 'Confirm Buy';
+        currentUser.wallet = wal - cost;
+        currentUser.purchases = (currentUser.purchases || 0) + 1;
+        saveOrder({ type: 'panel', isPc: true, item: fullItem, price: cost, img: payload.img, status: 'pending', charged: cost });
+        commit();
+        renderProfile();
+        closeAllModals();
+        showToast('Order placed — admin panel key bhejega');
+      });
+      return;
+    }
+
     currentUser.wallet = wal - cost;
     currentUser.purchases = (currentUser.purchases || 0) + 1;
     saveOrder({ type: 'panel', item: fullItem, price: cost, img: payload.img, status: 'pending', charged: cost });
@@ -2877,7 +2961,15 @@ setInterval(refreshLiveStore, 2000);
             </div>
           </div>
           ${st === 'accepted' ? '<div class="order-note">✅ Order accept ho gaya — admin jaldi bhejega</div>' : ''}
-          ${o.details ? `<div class="order-note gold">${o.type === 'panel' ? '🔑 PANEL KEY:' : 'CARD DETAILS:'} <span class="mono">${o.details}</span></div>` : ''}
+          ${o.details ? `
+            <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div>
+                <b>${o.type === 'panel' ? '🔑 ' + (o.isPc ? 'PC PANEL KEY' : 'PANEL KEY') : 'CARD DETAILS'}:</b>
+                <span class="mono" style="background:rgba(0,0,0,0.4); padding:3px 6px; border-radius:4px; font-weight:700; user-select:all;">${o.details}</span>
+                ${o.expires ? `<small style="display:block; color:#9da6be; margin-top:2px;">Expires: ${o.expires}</small>` : ''}
+              </div>
+              <button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="navigator.clipboard.writeText('${o.details}').then(() => showToast('Key copied to clipboard ✅'))">📋 Copy Key</button>
+            </div>` : ''}
           ${st === 'refunded' ? `<div class="order-note red">❌ Reject${o.reason ? ' — ' + o.reason : ''} — amount wallet me refund ho gaya</div>` : ''}
         </div>`;
     }).join('');
