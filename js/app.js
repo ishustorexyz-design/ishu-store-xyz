@@ -530,6 +530,16 @@ const ordersModal   = $('ordersModal');
         }
       }, err => console.warn('orders sync error:', err));
 
+      // 6. Live Support & Service Requests Listener (Cross-Device Ticket Mirror)
+      fb.fs.collection('system').doc('support').onSnapshot(doc => {
+        if (doc && doc.exists) {
+          const data = doc.data() || {};
+          const v = Array.isArray(data.list) ? data.list : [];
+          localStorage.setItem(SUPPORT_KEY, JSON.stringify(v));
+          if (currentOwner) { renderOwnerSvc(); renderOwnerDash(); }
+        }
+      }, err => console.warn('support sync error:', err));
+
     } catch (e) {
       console.warn('[Firestore] init fail', e);
     }
@@ -560,7 +570,10 @@ const ordersModal   = $('ordersModal');
     if (fb.fs && !fb.applying) fb.fs.collection('system').doc('txns').set({ list: t, updatedAt: Date.now() }).catch(() => {});
   };
   const loadSupport= () => { try { return JSON.parse(localStorage.getItem(SUPPORT_KEY)) || []; } catch(e) { return []; } };
-  const saveSupport= s => localStorage.setItem(SUPPORT_KEY, JSON.stringify(s));
+  const saveSupport= s => {
+    localStorage.setItem(SUPPORT_KEY, JSON.stringify(s));
+    if (fb.fs && !fb.applying) fb.fs.collection('system').doc('support').set({ list: s, updatedAt: Date.now() }).catch(() => {});
+  };
   const loadMaint  = () => { try { return JSON.parse(localStorage.getItem(MAINT_KEY)) || {}; } catch(e) { return {}; } };
   const saveMaint  = m => {
     localStorage.setItem(MAINT_KEY, JSON.stringify(m));
@@ -2011,9 +2024,9 @@ const ordersModal   = $('ordersModal');
       try {
         const snap = await fb.fs.collection('tickets')
           .where('user', '==', uLower)
-          .orderBy('lastUpdated', 'desc')
           .get();
         snap.forEach(d => userTicks.push(Object.assign({ id: d.id }, d.data())));
+        userTicks.sort((a, b) => (tsNumber(b.lastUpdated) || tsNumber(b.createdAt) || 0) - (tsNumber(a.lastUpdated) || tsNumber(a.createdAt) || 0));
       } catch (err) {
         console.warn('History query fail:', err);
       }
@@ -2021,6 +2034,7 @@ const ordersModal   = $('ordersModal');
 
     if (!userTicks.length && Array.isArray(allTickets) && allTickets.length) {
       userTicks = allTickets.filter(t => (t.user || '').toLowerCase() === uLower || (t.username || '').toLowerCase() === uLower);
+      userTicks.sort((a, b) => (tsNumber(b.lastUpdated) || tsNumber(b.createdAt) || 0) - (tsNumber(a.lastUpdated) || tsNumber(a.createdAt) || 0));
     }
 
     if (!userTicks.length) {
@@ -2069,17 +2083,19 @@ const ordersModal   = $('ordersModal');
       try {
         const snap = await fb.fs.collection('tickets')
           .where('user', '==', uLower)
-          .where('status', 'in', ['OPEN', 'IN_PROGRESS'])
-          .orderBy('lastUpdated', 'desc')
-          .limit(1)
           .get();
 
         if (!snap.empty) {
-          const doc = snap.docs[0];
-          activeTicketId = doc.id;
-          localStorage.setItem(ACTIVE_TICKET_KEY, doc.id);
-          startTicketThread(doc.id);
-          return;
+          const list = [];
+          snap.forEach(doc => list.push(Object.assign({ id: doc.id }, doc.data())));
+          list.sort((a, b) => (tsNumber(b.lastUpdated) || tsNumber(b.createdAt) || 0) - (tsNumber(a.lastUpdated) || tsNumber(a.createdAt) || 0));
+          const openTick = list.find(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS');
+          if (openTick) {
+            activeTicketId = openTick.id;
+            localStorage.setItem(ACTIVE_TICKET_KEY, openTick.id);
+            startTicketThread(openTick.id);
+            return;
+          }
         }
       } catch (err) {
         console.warn('Firestore active ticket query:', err);
@@ -2297,9 +2313,10 @@ const ordersModal   = $('ordersModal');
 
   function watchTickets() {
     if (!fb.fs || ownerTickUnsub) return;
-    ownerTickUnsub = ticketsCol().orderBy('lastUpdated', 'desc').onSnapshot(snap => {
+    ownerTickUnsub = ticketsCol().onSnapshot(snap => {
       const list = [];
       snap.forEach(d => list.push(Object.assign({ id: d.id }, d.data())));
+      list.sort((a, b) => (tsNumber(b.lastUpdated) || tsNumber(b.createdAt) || 0) - (tsNumber(a.lastUpdated) || tsNumber(a.createdAt) || 0));
       allTickets = list;
       if (!ownerSvc.classList.contains('hidden') && !activeSvcTicket) renderTickSidebar(allTickets);
       checkOwnerAlerts(allTickets);
