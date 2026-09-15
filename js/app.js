@@ -213,6 +213,8 @@ const ordersModal   = $('ordersModal');
   const TXN_KEY = 'ishu_txns';
   const SUPPORT_KEY = 'ishu_support';
   const MAINT_KEY = 'ishu_maintenance';
+  const SESSION_USER_KEY = 'ishu_session_user';
+  const SESSION_OWNER_KEY = 'ishu_session_owner';
   const PREMIUM_DAYS = 30 * 24 * 60 * 60 * 1000;   // 30 din validity
   const RESELLER_TARGET = 500;
   const VIP_FLOOR = 1000;   // wallet me ₹1000+ balance = VIP hamesha active
@@ -882,6 +884,9 @@ const ordersModal   = $('ordersModal');
 
   /* ─────────── Enter store ─────────── */
   function enterStore() {
+    if (currentUser && currentUser.username) {
+      localStorage.setItem(SESSION_USER_KEY, currentUser.username.toLowerCase());
+    }
     loginPage.classList.add('hidden');
     app.classList.remove('hidden');
     supportFab.classList.remove('hidden');
@@ -1043,11 +1048,13 @@ const ordersModal   = $('ordersModal');
 
   function logout() {
     currentUser = null;
+    localStorage.removeItem(SESSION_USER_KEY);
     supportFab.classList.add('hidden');
     app.classList.add('hidden');
     loginPage.classList.remove('hidden');
     setAuthMode('login');
     closeSupportModal();
+    showToast('Logged out');
   }
 
   /* ─────────── OWNER LOGIN + DASHBOARD ─────────── */
@@ -1062,6 +1069,7 @@ const ordersModal   = $('ordersModal');
     if (u !== OWNER_USER || p !== OWNER_PASS) { showToast('Invalid owner credentials'); return; }
     if (c !== OWNER_SEC) { showToast('Security code mismatch — access denied'); return; }
     currentOwner = true;
+    localStorage.setItem(SESSION_OWNER_KEY, 'true');
     Object.keys(ownerSeen).forEach(k => delete ownerSeen[k]);
     watchTickets();
     loginPage.classList.add('hidden');
@@ -1074,10 +1082,12 @@ const ordersModal   = $('ordersModal');
 
   ownerLogoutBtn.addEventListener('click', () => {
     currentOwner = false;
+    localStorage.removeItem(SESSION_OWNER_KEY);
     ownerPage.classList.add('hidden');
     loginPage.classList.remove('hidden');
     closeOwnerMenu();
     closeSupportModal();
+    showToast('Owner logged out');
   });
 
   /* Owner hamburger menu */
@@ -3800,10 +3810,65 @@ setInterval(refreshLiveStore, 2000);
     showToast('All accounts wiped for fresh registration');
   };
 
+  /* ─────────── Session Restore & Preloader Control ─────────── */
+  function restoreSavedSession() {
+    if (localStorage.getItem(SESSION_OWNER_KEY) === 'true') {
+      currentOwner = true;
+      Object.keys(ownerSeen).forEach(k => delete ownerSeen[k]);
+      watchTickets();
+      loginPage.classList.add('hidden');
+      app.classList.add('hidden');
+      ownerPage.classList.remove('hidden');
+      renderOwner('dash');
+      return true;
+    }
+    const savedUname = localStorage.getItem(SESSION_USER_KEY);
+    if (savedUname) {
+      const users = loadUsers();
+      const u = users[savedUname.toLowerCase()] || Object.values(users).find(x => (x.username || '').toLowerCase() === savedUname.toLowerCase());
+      if (u && !u.banned) {
+        currentUser = u;
+        enterStore();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hidePreloader() {
+    const preloader = document.getElementById('appPreloader');
+    if (!preloader) return;
+    preloader.classList.add('fade-out');
+    setTimeout(() => {
+      preloader.style.display = 'none';
+    }, 550);
+  }
+
+  window.showAppLoading = function(statusMsg) {
+    const preloader = document.getElementById('appPreloader');
+    const txt = document.getElementById('preloaderStatusText');
+    if (!preloader) return;
+    if (statusMsg && txt) txt.textContent = statusMsg;
+    preloader.style.display = 'flex';
+    preloader.classList.remove('fade-out');
+  };
+
+  window.hideAppLoading = function() {
+    hidePreloader();
+  };
+
   /* ─────────── Init ─────────── */
   fbInit();
   setAuthMode('login');
   renderGrid();
+
+  const sessionActive = restoreSavedSession();
+  if (!sessionActive) {
+    loginPage.classList.remove('hidden');
+    app.classList.add('hidden');
+  }
+
+  setTimeout(hidePreloader, 650);
 
   /* One-time clean: Reset all old test accounts for fresh universal registration */
   if (!localStorage.getItem('ishu_users_clean_v5')) {
