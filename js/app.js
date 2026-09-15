@@ -1159,7 +1159,20 @@ const ordersModal   = $('ordersModal');
           ${(m.apkId || m.apk) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
         </div>
         <div class="mat-iconrow">
-          <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image   function renderOwnerPanels() {
+          <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image link / photo link yahan daalo)" value="${(m.iconUrl || '').replace(/"/g, '&quot;')}">
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('maico_${i}_${j}').click()">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Upload Icon
+          </button>
+          <input type="file" id="maico_${i}_${j}" accept="image/*" hidden onchange="window.__matIcon(${i},${j},this)">
+          <img class="mat-icon-prev" id="maiprev_${i}_${j}" src="${m.iconUrl || m.icon || ''}" alt="" ${(m.iconUrl || m.icon) ? '' : 'style="display:none"'}>
+          ${(m.iconUrl || m.icon) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matIconClear(${i},${j})">✕ icon</button>` : ''}
+        </div>
+        <button class="btn btn-sm btn-cancel" onclick="window.__matDel(${i},${j})">✕ Remove</button>
+      </div>`;
+  }
+
+  function renderOwnerPanels() {
     const maint = loadMaint();
     const allPanels = [...MOBILE_PANELS, ...PC_PANELS];
     
