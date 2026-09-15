@@ -1093,13 +1093,19 @@ const ordersModal   = $('ordersModal');
         <input class="txn-input mat-label" placeholder="Label (jaise: FF Panel APK / Ob34 File)" value="${(m.label || '').replace(/"/g, '&quot;')}">
         <input class="txn-input mat-url" placeholder="MediaFire / koi bhi link (https://...)" value="${(m.url || '').replace(/"/g, '&quot;')}">
         <div class="mat-apkrow">
-          <button class="btn btn-sm ${(m.apkId || m.apk) ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">${(m.apkId || m.apk) ? '📦 ' + (m.apkName || 'APK set') : '⬆ Upload APK/SO/EXE (200MB+ bhi chalega)'}</button>
+          <button class="btn btn-sm ${(m.apkId || m.apk) ? 'btn-pay' : 'btn-ghost'}" onclick="document.getElementById('mapk_${i}_${j}').click()">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            ${(m.apkId || m.apk) ? (m.apkName || 'APK set') : 'Upload APK/SO/EXE'}
+          </button>
           <input type="file" id="mapk_${i}_${j}" hidden onchange="window.__matApk(${i},${j},this)">
           ${(m.apkId || m.apk) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
         </div>
         <div class="mat-iconrow">
           <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image link / photo link yahan daalo)" value="${(m.iconUrl || '').replace(/"/g, '&quot;')}">
-          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('maico_${i}_${j}').click()">⬆ Upload Icon</button>
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('maico_${i}_${j}').click()">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Upload Icon
+          </button>
           <input type="file" id="maico_${i}_${j}" accept="image/*" hidden onchange="window.__matIcon(${i},${j},this)">
           <img class="mat-icon-prev" id="maiprev_${i}_${j}" src="${m.iconUrl || m.icon || ''}" alt="" ${(m.iconUrl || m.icon) ? '' : 'style="display:none"'}>
           ${(m.iconUrl || m.icon) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matIconClear(${i},${j})">✕ icon</button>` : ''}
@@ -1124,28 +1130,40 @@ const ordersModal   = $('ordersModal');
               <strong>${p.name}</strong>
               <small class="mono">${p.tag || 'PC'} · start ${fmt(p.prices[0])}/hr</small>
             </div>
-            <button class="btn btn-sm ${isOn ? 'btn-cancel' : 'btn-pay'}" onclick="window.__toggleMaint('${p.name}')">${isOn ? '🔧 OFF' : '✅ LIVE'}</button>
-            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panEdit_${i}').classList.toggle('hidden')">✏️ Edit</button>
+            <button class="btn btn-sm ${isOn ? 'btn-cancel' : 'btn-pay'}" onclick="window.__toggleMaint('${p.name}')">${isOn ? 'OFF' : 'LIVE'}</button>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panEdit_${i}').classList.toggle('hidden')">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Edit
+            </button>
           </div>
           <div class="editor-body hidden" id="panEdit_${i}" data-panel="${i}">
             <p class="editor-label">Panel Photo (live change)</p>
-            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panImg_${i}').click()">📷 Change Photo</button>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panImg_${i}').click()">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Change Photo
+            </button>
             <input type="file" id="panImg_${i}" accept="image/*" hidden onchange="window.__pickPanelImg('${p.name}', this)">
             <p class="editor-label">Panel Video — demo tile pe play button dikhega (auto play nahi hoga)</p>
             <div class="mat-iconrow">
-              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panVid_${i}').click()">${(cfg.videoId || cfg.videoUrl) ? '🎬 Video set' : '⬆ Upload Video (mp4/webm)'}</button>
+              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panVid_${i}').click()">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+                ${(cfg.videoId || cfg.videoUrl) ? 'Video Set' : 'Upload Video'}
+              </button>
               <input type="file" id="panVid_${i}" accept="video/*" hidden onchange="window.__pickPanelVideo('${p.name}', this)">
               <input class="txn-input mat-icon-url" placeholder="Ya video URL (YouTube / direct link)" value="${(cfg.videoUrl || '').replace(/"/g, '&quot;')}" onchange="window.__setPanelVideoUrl('${p.name}', this.value)">
               ${(cfg.videoId || cfg.videoUrl) ? `<button class="btn btn-sm btn-cancel" onclick="window.__clearPanelVideo('${p.name}')">✕ video</button>` : ''}
             </div>
             <div class="mat-iconrow">
-              <input class="txn-input mat-icon-url" placeholder="▶ Setup Video — YouTube link (https://youtube.com/watch?v=...)" value="${(setupVid || '').replace(/"/g, '&quot;')}" onchange="window.__setSetupVideo('${p.name}', this.value)">
+              <input class="txn-input mat-icon-url" placeholder="Setup Video — YouTube link (https://youtube.com/watch?v=...)" value="${(setupVid || '').replace(/"/g, '&quot;')}" onchange="window.__setSetupVideo('${p.name}', this.value)">
             </div>
             <p class="editor-label">Requirement Links / APK — user ko BUY se pehle dikhte hain</p>
             <div id="mats_${i}">${mats.map((m, j) => matRow(i, j, m)).join('')}</div>
             <button class="btn btn-sm btn-ghost" onclick="window.__matAdd(${i})">+ Add Link / APK</button>
             <div class="editor-actions">
-              <button class="btn btn-primary btn-sm" onclick="window.__savePanel(${i},'${p.name}')">💾 Save Panel (LIVE)</button>
+              <button class="btn btn-primary btn-sm" onclick="window.__savePanel(${i},'${p.name}')">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Panel (LIVE)
+              </button>
             </div>
           </div>
         </div>`;
@@ -1162,9 +1180,11 @@ const ordersModal   = $('ordersModal');
               <strong>${c.name}</strong>
               <small class="mono">${fmt(c.price)}</small>
             </div>
-            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('cardImg_${i}').click()">📷</button>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('cardImg_${i}').click()">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
             <input type="file" id="cardImg_${i}" accept="image/*" hidden onchange="window.__pickCardImg('${c.name}', this)">
-            <button class="btn btn-sm ${sold ? 'btn-pay' : 'btn-cancel'}" onclick="window.__toggleCard('${c.name}')">${sold ? '♻️ Restock' : 'SOLD OUT'}</button>
+            <button class="btn btn-sm ${sold ? 'btn-pay' : 'btn-cancel'}" onclick="window.__toggleCard('${c.name}')">${sold ? 'Restock' : 'SOLD OUT'}</button>
           </div>
         </div>`;
     }).join('');
@@ -1172,7 +1192,7 @@ const ordersModal   = $('ordersModal');
     ownerPanels.innerHTML = `
       <h3 class="owner-subhead">Panel Editor — Links / APK / Photo (live)</h3>
       <div class="verify-info">
-        <p>Edit karo → Save Panel dabao → user ko buy se pehle naya link/APK/photo turant dikhega (isi browser me live). 🔧 OFF = maintenance, ✅ LIVE = normal.</p>
+        <p>Edit karo → Save Panel dabao → user ko buy se pehle naya link/APK/photo turant dikhega (isi browser me live). OFF = maintenance, LIVE = normal.</p>
       </div>
       <div class="admin-list">${panelsHTML}</div>
       <h3 class="owner-subhead">Cards — Sold Out / Photo</h3>
@@ -1181,8 +1201,8 @@ const ordersModal   = $('ordersModal');
 
   window.__toggleMaint = name => {
     const m = loadMaint();
-    if (m[name]) { delete m[name]; showToast(name + ' — LIVE again ✅'); }
-    else { m[name] = true; showToast(name + ' — OFF (Under Maintenance) 🔧'); }
+    if (m[name]) { delete m[name]; showToast(name + ' — LIVE status active'); }
+    else { m[name] = true; showToast(name + ' — Under Maintenance'); }
     saveMaint(m);
     renderOwner('panels');
   };
@@ -1193,7 +1213,7 @@ const ordersModal   = $('ordersModal');
     const c = edits.cards[name] = edits.cards[name] || {};
     c.soldOut = !c.soldOut;
     saveEdits(edits);
-    showToast(name + (c.soldOut ? ' — SOLD OUT' : ' — restock ho gaya ✅'));
+    showToast(name + (c.soldOut ? ' — marked SOLD OUT' : ' — restocked successfully'));
     renderOwner('panels');
     if (!document.getElementById('cards').classList.contains('hidden')) renderGrid();
   };
@@ -1455,64 +1475,54 @@ videoPlayer.load();
     ownerTxns.innerHTML = `
       <div class="txn-user-select">
         <label>USER chuno — sirf usi ke transactions dikhenge</label>
-        <select id="txnUserSelect">
-          ${names.map(n => `<option value="${n}" ${n === ownerTxnUser ? 'selected' : ''}>${n} (${(users[n].uid || '?')})</option>`).join('') || '<option>No users</option>'}
-        </select>
-      </div>
-      <div class="admin-list">
-        ${list.map(t => `
-          <div class="admin-row">
-            <div class="au-info">
-              <strong class="mono">${t.id}</strong>
-              <small>${t.type} · ${new Date(t.createdAt).toLocaleString()}</small>
-            </div>
-            <div class="au-stats">
-              <span>₹${t.amount}</span>
-              <span class="${t.status === 'paid' ? 'green' : (t.status === 'pending' ? 'gold' : 'red')}">${String(t.status).toUpperCase()}</span>
-            </div>
-          </div>`).join('') || '<div class="empty-state">Is user ka koi transaction nahi</div>'}
-      </div>`;
-    const sel = document.getElementById('txnUserSelect');
-    if (sel) sel.addEventListener('change', e => { ownerTxnUser = e.target.value; renderOwnerTxns(); });
-  }
-
-  /* ─────────── OWNER: VERIFY (manual) ─────────── */
-  async function renderOwnerVerify() {
+        <select id  async function renderOwnerVerify() {
     const txns = loadTxns().filter(t => t.status === 'pending').sort((a, b) => Number(b.received || false) - Number(a.received || false) || a.createdAt - b.createdAt);
     const info = `<div class="verify-info">
-      <strong>Payment Verify kaise karein?</strong>
-      <p>User ne Razorpay se pay kiya ya UTR/screenshot bheja. Neeche check karo — <b>Verify &amp; Credit</b> dabaane par txn SUCCESS ho jayega aur user ke wallet me amount add hoga. Galat/no payment ho to <b>Reject</b>.</p>
+      <strong>Payment Verification Center</strong>
+      <p>Verify user payment UTR and screenshot receipts. Click <b>Verify &amp; Credit</b> to credit amount to user's wallet immediately or <b>Reject</b> if invalid.</p>
     </div>`;
     const rows = [];
     for (const t of txns) {
       let ssHtml = '';
       if (t.ssUrl) {
-        ssHtml = `<img class="ss-preview" src="${t.ssUrl}" alt="" onclick="window.open('${t.ssUrl}')" style="cursor:zoom-in">`;
+        ssHtml = `<div class="ss-preview-box">
+          <img class="ss-preview" src="${t.ssUrl}" alt="Payment Screenshot" onclick="window.open('${t.ssUrl}', '_blank')" title="Click to open full view" style="cursor:zoom-in" loading="lazy">
+          <a href="${t.ssUrl}" target="_blank" rel="noopener" class="ss-link">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            View Full Screenshot
+          </a>
+        </div>`;
       } else if (t.ssKey) {
         try {
           const blob = await fileGet(t.ssKey);
-          if (blob) { const url = URL.createObjectURL(blob); ssHtml = `<img class="ss-preview" src="${url}" alt="" onclick="window.open('${url}')">`; }
-          else ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`;
-        } catch(e) { ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`; }
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            ssHtml = `<div class="ss-preview-box"><img class="ss-preview" src="${url}" alt="Screenshot" onclick="window.open('${url}')" style="cursor:zoom-in"><a href="${url}" target="_blank" class="ss-link">View Screenshot</a></div>`;
+          } else {
+            ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
+          }
+        } catch(e) {
+          ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
+        }
       } else if (t.ss) {
-        ssHtml = `<div>🧾 Screenshot: <span class="mono">${t.ss}</span></div>`;
+        ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss)}</span></div>`;
       }
       rows.push(`
-      <div class="admin-row col" style="border-color:${t.received ? 'rgba(255,215,0,.35)' : 'rgba(255,255,255,.06)'}">
+      <div class="admin-row col" style="border-color:${t.received ? 'rgba(255,106,0,.45)' : 'rgba(255,255,255,.06)'}">
         <div class="au-info">
-          <strong class="mono">${t.id}</strong>
-          <small>${t.user} · ₹${t.amount} · ${new Date(t.createdAt).toLocaleString()}</small>
+          <strong class="mono">${escapeHtml(t.id)}</strong>
+          <small>${escapeHtml(t.user)} · ₹${t.amount} · ${new Date(t.createdAt).toLocaleString()}</small>
         </div>
-        ${t.received ? '<div class="gold" style="font-weight:700">● UTR SUBMITTED — awaiting your confirm</div>' : ''}
-        ${t.utr ? `<div class="gold">UTR: <span class="mono">${t.utr}</span></div>` : ''}
+        ${t.received ? '<div class="gold" style="font-weight:700">● UTR &amp; SCREENSHOT SUBMITTED — awaiting your confirmation</div>' : ''}
+        ${t.utr ? `<div class="gold">UTR / Ref: <span class="mono">${escapeHtml(t.utr)}</span></div>` : ''}
         ${ssHtml}
         <div class="verify-actions">
-          <button class="btn btn-sm btn-pay" onclick="window.__ownerVerify('${t.id}')">Verify & Credit</button>
-          <button class="btn btn-sm btn-cancel" onclick="window.__ownerReject('${t.id}')">Reject</button>
+          <button class="btn btn-sm btn-pay" onclick="window.__ownerVerify('${t.id}')">✓ Verify &amp; Credit</button>
+          <button class="btn btn-sm btn-cancel" onclick="window.__ownerReject('${t.id}')">✕ Reject</button>
         </div>
       </div>`);
     }
-    ownerVerify.innerHTML = info + (rows.join('') || '<div class="empty-state">Abhi koi pending payment nahi 🎉</div>');
+    ownerVerify.innerHTML = info + (rows.join('') || '<div class="empty-state">No pending transactions</div>');
   }
 
   window.__ownerVerify = id => {
@@ -1547,9 +1557,8 @@ videoPlayer.load();
   };
 
 /* ─────────── FIRESTORE SUPPORT TICKETS ───────────
-     tickets/{TCK-XXXXXX}  → { ticketId, uid, category, status, createdAt, lastUpdated, lastSender, lastText }
-     tickets/{id}/messages → { sender:'user'|'admin', text, timestamp, attach? }
-     User: localStorage 'ishu_active_ticket' stores the active ticket id for auto-reconnect. */
+     Cross-device live support syncing via Firestore tickets collection.
+     Ensures seamless PC ↔ Mobile session continuation and user ticket isolation. */
   const ACTIVE_TICKET_KEY = 'ishu_active_ticket';
   const ticketsCol     = () => fb.fs && fb.fs.collection('tickets');
   const ticketDoc      = id => fb.fs && fb.fs.collection('tickets').doc(id);
@@ -1571,10 +1580,16 @@ videoPlayer.load();
       } else if ((m.attach.type || '').startsWith('video/')) {
         att = `<div class="att-video-wrap">
           <video class="att-video" controls playsinline preload="metadata" src="${m.attach.url}"></video>
-          <a class="att-dl-btn" href="${m.attach.url}" target="_blank" rel="noopener">🎬 Open / Download Video</a>
+          <a class="att-dl-btn" href="${m.attach.url}" target="_blank" rel="noopener">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            Open / Download Video
+          </a>
         </div>`;
       } else {
-        att = `<a class="att-file-link" href="${m.attach.url}" target="_blank" rel="noopener">📎 ${escapeHtml(m.attach.name || 'file')}</a>`;
+        att = `<a class="att-file-link" href="${m.attach.url}" target="_blank" rel="noopener">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          ${escapeHtml(m.attach.name || 'file')}
+        </a>`;
       }
     }
     const isAdmin = m.sender === 'admin';
@@ -1598,11 +1613,39 @@ videoPlayer.load();
     </div>`;
   }
 
-  /* ─── USER SIDE: create ticket / live chat ─── */
-  function openUserSupport() {
+  /* ─── USER SIDE: create ticket / cross-device live chat ─── */
+  async function openUserSupport() {
     if (!currentUser) { showToast('Login first'); return; }
     supportModal.classList.remove('hidden');
-    if (activeTicketId) { startTicketThread(activeTicketId); return; }
+    const uLower = currentUser.username.toLowerCase();
+
+    // 1. Cross-device continuity: query active OPEN ticket for this user from Firestore
+    if (fb.fs) {
+      try {
+        const snap = await fb.fs.collection('tickets')
+          .where('user', '==', uLower)
+          .where('status', 'in', ['OPEN', 'IN_PROGRESS'])
+          .orderBy('lastUpdated', 'desc')
+          .limit(1)
+          .get();
+
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          activeTicketId = doc.id;
+          localStorage.setItem(ACTIVE_TICKET_KEY, doc.id);
+          startTicketThread(doc.id);
+          return;
+        }
+      } catch (err) {
+        console.warn('Firestore active ticket query:', err);
+      }
+    }
+
+    if (activeTicketId) {
+      startTicketThread(activeTicketId);
+      return;
+    }
+
     const u = loadUsers()[currentUser.username] || {};
     if (!tfUid.value) tfUid.value = u.uid || currentUser.username || '';
     ticketFormPanel.classList.remove('hidden');
@@ -1610,7 +1653,7 @@ videoPlayer.load();
   }
 
   function startTicketThread(tid) {
-    if (!fb.fs) { showToast('Backend off — try later'); return; }
+    if (!fb.fs) { showToast('Backend offline — try later'); return; }
     activeTicketId = tid;
     localStorage.setItem(ACTIVE_TICKET_KEY, tid);
     ticketFormPanel.classList.add('hidden');
@@ -1636,10 +1679,10 @@ videoPlayer.load();
         if (inputRow) inputRow.style.display = 'none';
         supportMsgs.innerHTML =
           '<div class="resolve-banner">' +
-          '<div class="rb-ico">✅</div>' +
+          '<div class="rb-ico"><svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div>' +
           '<strong>Ticket Resolved</strong>' +
-          '<p>Owner has successfully resolved your ticket.<br>Thank you for your recharge &amp; support!</p>' +
-          '<small>Ab aap naya ticket bana sakte ho.</small>' +
+          '<p>Owner has successfully resolved your ticket.<br>Thank you for your support!</p>' +
+          '<button class="btn btn-primary btn-sm" style="margin-top:14px;width:100%" onclick="window.newTicketReset()">+ Start New Ticket</button>' +
           '</div>';
         showToast('Ticket ' + tid + ' resolved by owner ✓');
         return;
@@ -1648,12 +1691,25 @@ videoPlayer.load();
       ticketBarId.textContent = t.ticketId || tid;
       ticketBarStatus.textContent = t.status || 'OPEN';
       ticketBarStatus.className = 'ticket-status st-' + (t.status || 'OPEN').toLowerCase();
+
+      if (t.status === 'RESOLVED') {
+        if (inputRow) inputRow.style.display = 'none';
+        supportMsgs.innerHTML =
+          '<div class="resolve-banner">' +
+          '<div class="rb-ico"><svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div>' +
+          '<strong>Ticket Resolved</strong>' +
+          '<p>Owner has successfully resolved your ticket.<br>Thank you for your support!</p>' +
+          '<button class="btn btn-primary btn-sm" style="margin-top:14px;width:100%" onclick="window.newTicketReset()">+ Start New Ticket</button>' +
+          '</div>';
+      } else {
+        if (inputRow) inputRow.style.display = '';
+      }
     });
     tickUserUnsub = () => { msgUnsub(); docUnsub(); };
   }
 
   async function createTicket() {
-    if (!fb.fs) { showToast('Backend off — try later'); return; }
+    if (!fb.fs) { showToast('Backend offline — try later'); return; }
     const uid = (tfUid.value || '').trim();
     const cat = tfCat.value || 'Other';
     const text = (tfMsg.value || '').trim();
@@ -1662,12 +1718,23 @@ videoPlayer.load();
     const tid = genTicketId();
     const now = Date.now();
     try {
-      await ticketDoc(tid).set({ ticketId: tid, uid, category: cat, status: 'OPEN', createdAt: now, lastUpdated: now, lastSender: 'user', lastText: text.slice(0, 80) });
+      await ticketDoc(tid).set({
+        ticketId: tid,
+        user: currentUser.username.toLowerCase(),
+        username: currentUser.username,
+        uid,
+        category: cat,
+        status: 'OPEN',
+        createdAt: now,
+        lastUpdated: now,
+        lastSender: 'user',
+        lastText: text.slice(0, 80)
+      });
       await ticketMsgs(tid).add({ sender: 'user', text, timestamp: now });
-    } catch (e) { console.warn(e); showToast('Firestore write fail'); return; }
+    } catch (e) { console.warn(e); showToast('Ticket creation failed'); return; }
     tfMsg.value = '';
     startTicketThread(tid);
-    showToast('Ticket ' + tid + ' create ho gayi ✓');
+    showToast('Ticket ' + tid + ' created successfully ✓');
   }
 
   function sendTicketMsg() {
@@ -1684,7 +1751,7 @@ videoPlayer.load();
     ticketDoc(tid).update({ lastUpdated: Date.now(), lastSender: 'user', lastText: (att ? '📎 ' : '') + ((text || att.name).slice(0, 80)) }).catch(() => {});
   }
 
-function newTicketReset() {
+  function newTicketReset() {
     activeTicketId = '';
     localStorage.removeItem(ACTIVE_TICKET_KEY);
     if (tickUserUnsub) tickUserUnsub();
@@ -1693,6 +1760,7 @@ function newTicketReset() {
     const u = loadUsers()[currentUser.username] || {};
     if (!tfUid.value) tfUid.value = u.uid || currentUser.username || '';
   }
+  window.newTicketReset = newTicketReset;
 
   function escapeHtml(s) {
     const d = document.createElement('div');
@@ -1728,7 +1796,10 @@ function newTicketReset() {
     wrap.className = 'up-prog';
     wrap.innerHTML = `
       <div class="up-prog-head">
-        <span class="up-chip">📎 <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})</span>
+        <span class="up-chip">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})
+        </span>
         <span class="up-state wait">0%</span>
         <button class="up-x" title="Remove" type="button">&times;</button>
       </div>
@@ -1739,8 +1810,8 @@ function newTicketReset() {
     const xbtn = wrap.querySelector('.up-x');
     xbtn.addEventListener('click', clearPendingAtt);
     pendingAtt = { name: file.name, type: file.type, size: file.size, url: '', ok: false, el: wrap };
-    const dir = 'tickets/' + (who === 'owner' ? activeSvcTicket : activeTicketId) + '/' + (who === 'owner' ? 'a' : 'u') + '_' + Date.now() + '_';
-    fbUpload(dir + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file, (b, t) => {
+    
+    universalUpload(file, (b, t) => {
       if (!pendingAtt || pendingAtt.el !== wrap) return;
       const p = Math.min(100, Math.round((b / (t || 1)) * 100));
       fill.style.width = p + '%';
@@ -1781,16 +1852,7 @@ function newTicketReset() {
     ownerTickUnsub = ticketsCol().orderBy('lastUpdated', 'desc').onSnapshot(snap => {
       const list = [];
       snap.forEach(d => list.push(Object.assign({ id: d.id }, d.data())));
-      /* OLD RESOLVED AUTO-CLEANUP: RESOLVED tickets ka koi kaam nahi — cloud se purge */
-      list.forEach(t => {
-        if (t.status !== 'RESOLVED' || t.id === activeSvcTicket) return;
-        ticketMsgs(t.id).get().then(snaps => {
-          const dels = [];
-          snaps.forEach(s => dels.push(s.ref.delete().catch(() => {})));
-          return Promise.all(dels).then(() => ticketDoc(t.id).delete().catch(() => {}));
-        }).catch(() => {});
-      });
-      allTickets = list.filter(t => t.status !== 'RESOLVED' || t.id === activeSvcTicket);
+      allTickets = list;
       if (!ownerSvc.classList.contains('hidden') && !activeSvcTicket) renderTickSidebar(allTickets);
       checkOwnerAlerts(allTickets);
     }, err => console.warn('tick snap', err));
@@ -1845,11 +1907,11 @@ function newTicketReset() {
           <strong class="mono">${escapeHtml(t.ticketId || t.id)}</strong>
           <span class="ticket-status st-${(t.status || 'OPEN').toLowerCase()}">${escapeHtml(t.status || 'OPEN')}</span>
         </div>
-        <div class="tick-item-user">UID ${escapeHtml(t.uid || '—')} · ${escapeHtml(t.category || '')}</div>
+        <div class="tick-item-user">User: ${escapeHtml(t.user || t.username || '—')} · UID: ${escapeHtml(t.uid || '—')}</div>
         <div class="tick-item-preview">${preview}</div>
         <small class="muted2">${lastUp}</small>
       </div>`;
-    }).join('') || '<div class="empty-state">Koi ticket nahi</div>';
+    }).join('') || '<div class="empty-state">No tickets yet</div>';
   }
 
   let tInfo = { uid: 'User' };
@@ -1865,17 +1927,18 @@ function newTicketReset() {
       if (!d.exists) {
         activeSvcTicket = null;
         renderOwnerSvc();
-        showToast('Ticket resolved & deleted ✓');
+        showToast('Ticket removed');
         return;
       }
       const t = d.data(); if (!t) return;
       tInfo.uid = t.uid || 'User';
       if (!infoEl || !actsEl) return;
-      infoEl.innerHTML = `<strong class="mono">${escapeHtml(t.ticketId || rid)}</strong> <span class="muted2">· UID ${escapeHtml(t.uid || '—')} · ${escapeHtml(t.category || '')}</span>`;
+      infoEl.innerHTML = `<strong class="mono">${escapeHtml(t.ticketId || rid)}</strong> <span class="muted2">· User: ${escapeHtml(t.user || t.username || '—')} · UID: ${escapeHtml(t.uid || '—')} · ${escapeHtml(t.category || '')}</span>`;
       actsEl.innerHTML = t.status === 'RESOLVED'
-        ? `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','OPEN')">↺ Reopen</button>`
-        : `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','IN_PROGRESS')">⏳ In-Progress</button>
-           <button class="btn btn-sm btn-resolve" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Resolved — Close & Delete</button>`;
+        ? `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','OPEN')">↺ Reopen</button>
+           <button class="btn btn-sm btn-cancel" onclick="window.__deleteTicket('${rid}')">✕ Purge</button>`
+        : `<button class="btn btn-sm btn-ghost" onclick="window.__setTicketStatus('${rid}','IN_PROGRESS')">In-Progress</button>
+           <button class="btn btn-sm btn-pay" onclick="window.__setTicketStatus('${rid}','RESOLVED')">✓ Mark Resolved</button>`;
     });
     ownerMsgUnsub = ticketMsgs(rid).orderBy('timestamp', 'asc').onSnapshot(snap => {
       const html = [];
@@ -1887,20 +1950,27 @@ function newTicketReset() {
 
   window.__setTicketStatus = (rid, st) => {
     if (!fb.fs) return;
-    if (st === 'RESOLVED') {
-      showToast('Closing ticket — deleting data...');
-      ticketMsgs(rid).get().then(snaps => {
-        const dels = [];
-        snaps.forEach(s => dels.push(s.ref.delete()));
-        return Promise.all(dels).then(() => ticketDoc(rid).delete()).then(() => {
-          activeSvcTicket = null;
-          renderOwnerSvc();
-          showToast('Ticket resolved, closed & deleted ✓');
-        }).catch(e => { console.warn(e); showToast('Delete fail'); });
-      }).catch(e => { console.warn(e); showToast('Delete fail'); });
-      return;
+    ticketDoc(rid).update({ status: st, lastUpdated: Date.now() }).then(() => {
+      showToast('Status → ' + st);
+    }).catch(() => showToast('Status update fail'));
+  };
+
+  window.__deleteTicket = async rid => {
+    if (!fb.fs) return;
+    showToast('Deleting ticket...');
+    try {
+      const snaps = await ticketMsgs(rid).get();
+      const dels = [];
+      snaps.forEach(s => dels.push(s.ref.delete()));
+      await Promise.all(dels);
+      await ticketDoc(rid).delete();
+      activeSvcTicket = null;
+      renderOwnerSvc();
+      showToast('Ticket purged successfully');
+    } catch(e) {
+      console.warn(e);
+      showToast('Purge failed');
     }
-    ticketDoc(rid).update({ status: st, lastUpdated: Date.now() }).then(() => showToast('Status → ' + st)).catch(() => showToast('Status update fail'));
   };
 
   function ownerSendFile() {
@@ -1932,7 +2002,9 @@ function newTicketReset() {
     const el = document.createElement('div');
     el.className = 'owner-alert';
     el.innerHTML = `
-      <div class="oa-av"><span>&#128172;</span></div>
+      <div class="oa-av">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
+      </div>
       <div class="oa-body">
         <strong>${escapeHtml(t.ticketId || t.id)}</strong> <span class="mono">UID ${escapeHtml(t.uid || '—')}</span>
         <p>${escapeHtml((t.lastText || 'new ticket').slice(0, 70))}</p>
@@ -2398,11 +2470,14 @@ setInterval(refreshLiveStore, 2000);
           </div>
 
           ${pending ? (sent
-            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssUrl ? `<img class="shot-thumb" src="${t.ssUrl}" alt="">` : (t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : '')}</div>`
+            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssUrl ? `<img class="shot-thumb" src="${t.ssUrl}" alt="" onclick="window.open('${t.ssUrl}')">` : (t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : '')}</div>`
             : `
             <div class="txn-timerbar" data-txn="${t.id}">
               <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
-              <span class="timer-txt">⏱ Time left — ${timeStr}</span>
+              <span class="timer-txt">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Time left — ${timeStr}
+              </span>
             </div>
 
             <div class="txn-verify">
@@ -2449,7 +2524,6 @@ setInterval(refreshLiveStore, 2000);
   const txnUpls = {};
   function prepareTxnShot(id, file) {
     if (txnUpls[id] && txnUpls[id].p) return txnUpls[id].p;
-    const isImg = (file.type || '').startsWith('image/');
     if (file.size > 100 * 1048576) { showToast('Screenshot 100MB se choti rakho'); return Promise.resolve(''); }
     const item = document.getElementById('shot_' + id)?.closest('.txn-item');
     let wrap = item && item.querySelector('.up-prog');
@@ -2459,43 +2533,54 @@ setInterval(refreshLiveStore, 2000);
       wrap.className = 'up-prog';
       wrap.innerHTML = `
         <div class="up-prog-head">
-          <span class="up-chip">📎 <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})</span>
+          <span class="up-chip">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <b>${escapeHtml(file.name)}</b> (${fmtSize(file.size)})
+          </span>
           <span class="up-state wait">0%</span>
         </div>
         <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>`;
       const place = item.querySelector('.txn-verify') || item;
       place.insertAdjacentElement('afterend', wrap);
     }
-    const fill = wrap.querySelector('.progress-fill');
-    const st = wrap.querySelector('.up-state');
-    const done = url => {
-      if (wrap) { fill.style.width = '100%'; if (st) { st.textContent = url ? '✓ Ready' : 'Saved (offline)'; st.classList.remove('wait'); } }
-      txnUpls[id] = { done: true, url: url || '', p: txnUpls[id] ? txnUpls[id].p : null };
-      if (url) {
-        const list = loadTxns();
-        const rec = list.find(t => t.id === id);
-        if (rec) { rec.ssUrl = url; saveTxns(list); }
-      }
-      if (wrap) setTimeout(() => { if (wrap && wrap.parentNode) wrap.remove(); }, 2200);
-    };
+    const fill = wrap ? wrap.querySelector('.progress-fill') : null;
+    const st = wrap ? wrap.querySelector('.up-state') : null;
+
     const ssKey = 'ss_' + id.toLowerCase();
     filePut(ssKey, file).then(() => {
       const list = loadTxns();
       const rec = list.find(t => t.id === id);
       if (rec && !rec.ssKey) { rec.ssKey = ssKey; saveTxns(list); }
     }).catch(() => {});
-    if (fb.ok) {
-      const p = fbUpload('ss/' + id.toLowerCase() + '/shot_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'), file, (b, t) => {
-        if (!wrap) return;
-        const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
-        fill.style.width = pct + '%';
-        if (st) st.textContent = pct + '%';
-      }).then(url => { done(url); return url; }).catch(() => { done(''); return ''; });
-      txnUpls[id] = { done: false, url: '', p };
-      return p;
-    }
-    done('');
-    return Promise.resolve('');
+
+    const p = universalUpload(file, (b, t) => {
+      if (!wrap) return;
+      const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
+      if (fill) fill.style.width = pct + '%';
+      if (st) st.textContent = pct + '%';
+    }).then(url => {
+      if (wrap) {
+        if (fill) fill.style.width = '100%';
+        if (st) { st.textContent = '✓ Ready'; st.classList.remove('wait'); }
+      }
+      txnUpls[id] = { done: true, url: url || '' };
+      if (url) {
+        const list = loadTxns();
+        const rec = list.find(t => t.id === id);
+        if (rec) { rec.ssUrl = url; saveTxns(list); }
+      }
+      showToast('Screenshot upload successful ✓ — ab Verify & Submit dabao');
+      if (wrap) setTimeout(() => { if (wrap && wrap.parentNode) wrap.remove(); }, 2500);
+      return url || '';
+    }).catch(err => {
+      console.warn('Screenshot upload err:', err);
+      if (st) { st.textContent = 'Upload fail'; st.classList.add('err'); }
+      showToast('Upload fail — phir try karo');
+      return '';
+    });
+
+    txnUpls[id] = { done: false, url: '', p };
+    return p;
   }
 
   window.__payTxn = id => {
@@ -2513,17 +2598,18 @@ setInterval(refreshLiveStore, 2000);
   };
 
   window.__verifyTxn = async id => {
-    const utr = document.getElementById('utr_' + id)?.value.trim();
+    const utr = (document.getElementById('utr_' + id)?.value || '').trim();
     const shot = document.getElementById('shot_' + id)?.files[0];
     if (!utr) { showToast('Enter the UTR number'); return; }
     const all = loadTxns();
     const hit = all.find(t => t.id === id);
     if (hit && hit.status === 'pending') {
       let ssUrl = hit.ssUrl || '';
-      if (shot) {
-        if (txnUpls[id] && txnUpls[id].done) ssUrl = txnUpls[id].url || ssUrl;
-        else {
-          showToast('Screenshot upload...');
+      if (shot && !ssUrl) {
+        if (txnUpls[id] && txnUpls[id].done && txnUpls[id].url) {
+          ssUrl = txnUpls[id].url;
+        } else {
+          showToast('Uploading screenshot...');
           ssUrl = await prepareTxnShot(id, shot);
         }
       }
@@ -2534,7 +2620,7 @@ setInterval(refreshLiveStore, 2000);
       if (ssUrl) hit.ssUrl = ssUrl;
       saveTxns(all);
       renderTxns();
-      showToast('UTR + screenshot sent — admin verify kar ke credit karega ✓');
+      showToast('UTR + screenshot sent — admin will verify & credit wallet ✓');
     }
   };
 

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
 
@@ -224,7 +224,10 @@
         <h3 id="profileName">Player</h3>
         <div class="pc-idrow">
           <span class="pc-id-chip">USER ID: <b id="pcUid">—</b></span>
-          <button class="pc-badge-link" id="pcBadgeLink">🏅 Badge / VIP</button>
+          <button class="pc-badge-link" id="pcBadgeLink">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+            Badge / VIP
+          </button>
         </div>
       </div>
       <div class="pc-stats">
@@ -369,11 +372,17 @@
 <div id="badgeModal" class="modal hidden">
   <div class="modal-card">
     <button class="modal-close" id="closeBadgeBtn">✕</button>
-    <h3>🏅 Badges & VIP</h3>
+    <h3>
+      <svg class="icon-sm" style="color:#ffd700;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+      Badges &amp; VIP
+    </h3>
     <p class="modal-sub">Apna badge chuno — jo band hai wo lock hai, VIP kaise milega niche dekho</p>
     <div id="badgeList" class="badge-list"></div>
     <div class="vip-how">
-      <h4>⭐ VIP badge kaise milega?</h4>
+      <h4>
+        <svg class="icon-sm" style="color:#ffd700;margin-right:4px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        VIP badge kaise milega?
+      </h4>
       <p>• <b>BRONZE</b> — sabhi ko free</p>
       <p>• <b>SILVER</b> — sabhi ko free</p>
       <p>• <b>VIP</b> — ek bhi deposit ya purchase karo (₹500 deposit = 30 days Premium + 20% OFF)</p>
@@ -415,7 +424,7 @@
       </select>
       <textarea id="tfMsg" class="tf-textarea" placeholder="Describe your issue..." maxlength="1000"></textarea>
       <button id="tfSubmit" class="btn btn-primary btn-block">Create Ticket</button>
-      <small class="tf-note">After creating, you can track this ticket anytime — it will auto-reopen on the last ticket you made ☝️</small>
+      <small class="tf-note">After creating, you can track this ticket anytime across all your devices.</small>
     </div>
 
     <!-- ═══════════ LIVE CHAT THREAD ═══════════ -->
@@ -459,6 +468,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=22"></script>
+<script src="js/app.js?v=23"></script>
 </body>
 </html>
