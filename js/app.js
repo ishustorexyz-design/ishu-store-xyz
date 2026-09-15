@@ -1159,27 +1159,24 @@ const ordersModal   = $('ordersModal');
           ${(m.apkId || m.apk) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matApkClear(${i},${j})">✕ APK</button>` : ''}
         </div>
         <div class="mat-iconrow">
-          <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image link / photo link yahan daalo)" value="${(m.iconUrl || '').replace(/"/g, '&quot;')}">
-          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('maico_${i}_${j}').click()">
-            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            Upload Icon
-          </button>
-          <input type="file" id="maico_${i}_${j}" accept="image/*" hidden onchange="window.__matIcon(${i},${j},this)">
-          <img class="mat-icon-prev" id="maiprev_${i}_${j}" src="${m.iconUrl || m.icon || ''}" alt="" ${(m.iconUrl || m.icon) ? '' : 'style="display:none"'}>
-          ${(m.iconUrl || m.icon) ? `<button class="btn btn-sm btn-cancel" onclick="window.__matIconClear(${i},${j})">✕ icon</button>` : ''}
-        </div>
-        <button class="btn btn-sm btn-cancel" onclick="window.__matDel(${i},${j})">✕ Remove</button>
-      </div>`;
-  }
-
-  function renderOwnerPanels() {
+          <input class="txn-input mat-icon-url" placeholder="Icon URL (copy image   function renderOwnerPanels() {
     const maint = loadMaint();
     const allPanels = [...MOBILE_PANELS, ...PC_PANELS];
+    
+    // Preserve which edit accordion panels are currently open
+    const openSet = new Set();
+    if (ownerPanels) {
+      ownerPanels.querySelectorAll('.editor-body:not(.hidden)').forEach(el => {
+        if (el.id) openSet.add(el.id);
+      });
+    }
+
     const panelsHTML = allPanels.map((p, i) => {
       const cfg = loadEdits().panels[p.name] || {};
       const isOn = !maint[p.name];
       const mats = (cfg.mats && cfg.mats.length) ? cfg.mats : [{}];
       const setupVid = panelSetupVid(p.name);
+      const isExpanded = openSet.has('panEdit_' + i);
       return `
         <div class="editor-card">
           <div class="editor-head">
@@ -1194,7 +1191,7 @@ const ordersModal   = $('ordersModal');
               Edit
             </button>
           </div>
-          <div class="editor-body hidden" id="panEdit_${i}" data-panel="${i}">
+          <div class="editor-body ${isExpanded ? '' : 'hidden'}" id="panEdit_${i}" data-panel="${i}">
             <p class="editor-label">Panel Photo (live change)</p>
             <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panImg_${i}').click()">
               <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1202,14 +1199,23 @@ const ordersModal   = $('ordersModal');
             </button>
             <input type="file" id="panImg_${i}" accept="image/*" hidden onchange="window.__pickPanelImg('${p.name}', this)">
             <p class="editor-label">Panel Video — demo tile pe play button dikhega (auto play nahi hoga)</p>
-            <div class="mat-iconrow">
-              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('panVid_${i}').click()">
+            <div class="mat-iconrow" id="panVidRow_${i}">
+              <button class="btn btn-sm btn-ghost" id="panVidBtn_${i}" onclick="document.getElementById('panVid_${i}').click()">
                 <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
                 ${(cfg.videoId || cfg.videoUrl) ? 'Video Set' : 'Upload Video'}
               </button>
-              <input type="file" id="panVid_${i}" accept="video/*" hidden onchange="window.__pickPanelVideo('${p.name}', this)">
-              <input class="txn-input mat-icon-url" placeholder="Ya video URL (YouTube / direct link)" value="${(cfg.videoUrl || '').replace(/"/g, '&quot;')}" onchange="window.__setPanelVideoUrl('${p.name}', this.value)">
-              ${(cfg.videoId || cfg.videoUrl) ? `<button class="btn btn-sm btn-cancel" onclick="window.__clearPanelVideo('${p.name}')">✕ video</button>` : ''}
+              <input type="file" id="panVid_${i}" accept="video/*" hidden onchange="window.__pickPanelVideo('${p.name}', ${i}, this)">
+              <input class="txn-input mat-icon-url" id="panVidInput_${i}" placeholder="Ya video URL (YouTube / direct link)" value="${(cfg.videoUrl || '').replace(/"/g, '&quot;')}" onchange="window.__setPanelVideoUrl('${p.name}', this.value)">
+              ${(cfg.videoId || cfg.videoUrl) ? `<button class="btn btn-sm btn-cancel" id="panVidDelBtn_${i}" onclick="window.__clearPanelVideo('${p.name}', ${i})">✕ video</button>` : ''}
+            </div>
+            <div id="panVidProg_${i}" class="video-up-track hidden" style="margin-top:6px; margin-bottom:10px; background:rgba(255,255,255,0.05); padding:8px 10px; border-radius:8px; border:1px solid rgba(0,229,255,0.25);">
+              <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#00e5ff; font-weight:700; margin-bottom:5px;">
+                <span id="panVidStatus_${i}">Saving & uploading...</span>
+                <span id="panVidPct_${i}">0%</span>
+              </div>
+              <div style="height:6px; background:rgba(0,0,0,0.4); border-radius:4px; overflow:hidden;">
+                <div id="panVidFill_${i}" style="width:0%; height:100%; background:linear-gradient(90deg,#00e5ff,#00ff88); transition:width .2s ease;"></div>
+              </div>
             </div>
             <div class="mat-iconrow">
               <input class="txn-input mat-icon-url" placeholder="Setup Video — YouTube link (https://youtube.com/watch?v=...)" value="${(setupVid || '').replace(/"/g, '&quot;')}" onchange="window.__setSetupVideo('${p.name}', this.value)">
@@ -1293,7 +1299,7 @@ const ordersModal   = $('ordersModal');
     rd.readAsDataURL(f);
   };
 
-window.__pickCardImg = (name, input) => {
+  window.__pickCardImg = (name, input) => {
     const f = input.files[0];
     if (!f) return;
     if (f.size > 2 * 1024 * 1024) { showToast('Photo 2MB se chhota rakho'); input.value = ''; return; }
@@ -1310,11 +1316,22 @@ window.__pickCardImg = (name, input) => {
     rd.readAsDataURL(f);
   };
 
-  window.__pickPanelVideo = async (name, input) => {
+  window.__pickPanelVideo = async (name, panelIdx, input) => {
     const f = input.files && input.files[0];
     if (!f) return;
-    showToast('Video save ho raha hai...');
     input.value = '';
+
+    const progBox = document.getElementById('panVidProg_' + panelIdx);
+    const fillEl = document.getElementById('panVidFill_' + panelIdx);
+    const statusEl = document.getElementById('panVidStatus_' + panelIdx);
+    const pctEl = document.getElementById('panVidPct_' + panelIdx);
+    const btnEl = document.getElementById('panVidBtn_' + panelIdx);
+    const inputEl = document.getElementById('panVidInput_' + panelIdx);
+
+    if (progBox) progBox.classList.remove('hidden');
+    if (fillEl) fillEl.style.width = '10%';
+    if (pctEl) pctEl.textContent = '10%';
+    if (statusEl) { statusEl.textContent = 'Local saving...'; statusEl.style.color = '#00e5ff'; }
 
     // 1. Instant local IndexedDB save so it ALWAYS plays on THIS device without fail
     const vidId = 'vid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
@@ -1325,32 +1342,50 @@ window.__pickCardImg = (name, input) => {
       edits.panels[name].videoId = vidId;
       edits.panels[name].videoName = f.name;
       saveEdits(edits);
-      renderOwner('panels');
       renderGrid();
-      showToast('Video saved ✅ — uploading to cloud...');
+      if (btnEl) btnEl.textContent = 'Video Set';
     } catch(e) {
       console.warn('Local save error:', e);
     }
 
-    // 2. Cloud upload for multi-device sync
+    // 2. Smooth strictly monotonic progress (never goes backwards)
+    let currentPct = 15;
+    if (fillEl) fillEl.style.width = currentPct + '%';
+    if (pctEl) pctEl.textContent = currentPct + '%';
+    if (statusEl) statusEl.textContent = 'Cloud uploading...';
+
+    const onProg = (b, t) => {
+      const calculated = Math.min(99, Math.round(15 + ((b / (t || 1)) * 84)));
+      if (calculated > currentPct) {
+        currentPct = calculated;
+        if (fillEl) fillEl.style.width = currentPct + '%';
+        if (pctEl) pctEl.textContent = currentPct + '%';
+      }
+    };
+
     try {
-      const url = await universalUpload(f, (b, t) => {
-        const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
-        showToast('Cloud upload: ' + pct + '%');
-      });
+      const url = await universalUpload(f, onProg);
       if (url) {
         const edits = loadEdits();
         edits.panels[name] = edits.panels[name] || {};
         edits.panels[name].videoUrl = url;
         edits.panels[name].videoName = f.name;
         saveEdits(edits);
-        renderOwner('panels');
         renderGrid();
+        if (inputEl) inputEl.value = url;
+        if (fillEl) fillEl.style.width = '100%';
+        if (pctEl) pctEl.textContent = '100%';
+        if (statusEl) { statusEl.textContent = 'Upload Complete ✓'; statusEl.style.color = '#00ff88'; }
         showToast('Video Cloud Ready ✅ — PC aur Phone sab par play hoga');
+        setTimeout(() => { if (progBox) progBox.classList.add('hidden'); }, 3500);
       }
     } catch (err) {
       console.warn('Cloud sync note:', err);
-      showToast('Video saved locally ✅ (Online sync ke liye YouTube link bhi paste kar sakte hain)');
+      if (fillEl) fillEl.style.width = '100%';
+      if (pctEl) pctEl.textContent = '100%';
+      if (statusEl) { statusEl.textContent = 'Saved Locally ✓'; statusEl.style.color = '#ffd700'; }
+      showToast('Video saved locally ✅');
+      setTimeout(() => { if (progBox) progBox.classList.add('hidden'); }, 3500);
     }
   };
 
@@ -1371,7 +1406,7 @@ window.__pickCardImg = (name, input) => {
     renderGrid();
   };
 
-  window.__clearPanelVideo = name => {
+  window.__clearPanelVideo = (name, panelIdx) => {
     const edits = loadEdits();
     const c = edits.panels[name] || {};
     if (c.videoId) fileDel(c.videoId).catch(()=>{});
