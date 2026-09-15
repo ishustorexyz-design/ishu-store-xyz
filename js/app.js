@@ -432,14 +432,42 @@ const ordersModal   = $('ordersModal');
     const users = loadUsers();
 
     if (authMode === 'register') {
-      if (users[username]) { showToast('Username taken — try another'); return; }
-      currentUser = {
-        username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
-        wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now()
-      };
-      saveUsers({ ...users, [username]: currentUser });
-      showToast('Account created — Welcome!');
-      enterStore();
+      /* CROSS-DEVICE FIX: cloud me username check — PC/phone wala account duplicate mat banao */
+      const cloudCheck = fb.ok
+        ? fb.db.ref('users/' + username).once('value')
+        : Promise.resolve({ val: () => null });
+      cloudCheck.then(snap => {
+        const cloud = snap.val();
+        if (cloud && !cloud.banned) {
+          // Existing account mila (dobara se usi username se)? Login karo — naya mat banao
+          if (cloud.pass !== pass) { showToast('Ye username pehle se hai — sahi password dalo'); setAuthMode('login'); return; }
+          const nu = Object.assign({}, cloud); nu.updatedAt = Date.now();
+          const list = loadUsers(); list[username] = nu;
+          localStorage.setItem(USERS_KEY, JSON.stringify(list));
+          if (!fb.applying) fb.db.ref('users/' + username).update(nu).catch(() => {});
+          currentUser = nu;
+          showToast('Existing account se login ✓ (aapka PC account mila)');
+          enterStore();
+          return;
+        }
+        if (users[username]) { showToast('Username taken — try another'); return; }
+        currentUser = {
+          username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
+          wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now()
+        };
+        saveUsers({ ...users, [username]: currentUser });
+        showToast('Account created — Welcome!');
+        enterStore();
+      }).catch(() => {
+        if (users[username]) { showToast('Username taken — try another'); return; }
+        currentUser = {
+          username, uid: 'USR-' + Date.now().toString(36).toUpperCase(), name: username, pass, email: username + '@store.xyz', photo: '',
+          wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now()
+        };
+        saveUsers({ ...users, [username]: currentUser });
+        showToast('Account created — Welcome!');
+        enterStore();
+      });
       return;
     }
 
