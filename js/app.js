@@ -352,19 +352,23 @@ const ordersModal   = $('ordersModal');
 
       // 1. Live Users Listener (Cross-device Account Mirror)
       fb.fs.collection('users').onSnapshot(snap => {
-        const local = loadUsers();
-        let me = null;
+        const cloudUsers = {};
         snap.forEach(doc => {
-          const r = doc.data() || {};
-          const k = doc.id.toLowerCase();
-          const l = local[k];
-          if (!l || (r.updatedAt || 0) >= (l.updatedAt || 0)) local[k] = r;
-          if (currentUser && k === (currentUser.username || '').toLowerCase()) me = r;
+          cloudUsers[doc.id.toLowerCase()] = doc.data() || {};
         });
-        localStorage.setItem(USERS_KEY, JSON.stringify(local));
-        if (currentUser && me && (me.updatedAt || 0) >= (currentUser.updatedAt || 0)) {
-          currentUser = me;
-          renderProfile();
+        localStorage.setItem(USERS_KEY, JSON.stringify(cloudUsers));
+        if (currentUser) {
+          const me = cloudUsers[(currentUser.username || '').toLowerCase()];
+          if (!me) {
+            currentUser = null;
+            showToast('Aapka account remove kar diya gaya hai');
+            setTimeout(() => location.reload(), 1500);
+            return;
+          }
+          if ((me.updatedAt || 0) >= (currentUser.updatedAt || 0)) {
+            currentUser = me;
+            renderProfile();
+          }
         }
         if (currentOwner) {
           renderOwnerUsers(); renderOwnerDash(); renderOwnerSvc(); renderOwnerVerify(); renderOwnerTxns();
@@ -642,13 +646,7 @@ const ordersModal   = $('ordersModal');
       return true;
     };
 
-    // Fast check local cache
-    if (local && local.pass === pass) {
-      proceedLogin(local);
-      return;
-    }
-
-    // Check Cloud Firestore (for cross-device login)
+    // Check Cloud Firestore as primary source of truth
     if (fb.fs) {
       try {
         const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000));
@@ -663,12 +661,21 @@ const ordersModal   = $('ordersModal');
           localStorage.setItem(USERS_KEY, JSON.stringify(all));
           proceedLogin(cloudData);
           return;
+        } else if (doc && !doc.exists) {
+          // Account was deleted in Firestore
+          const all = loadUsers();
+          delete all[username];
+          localStorage.setItem(USERS_KEY, JSON.stringify(all));
+          showToast('No account found — Pehle Register karein');
+          setAuthMode('register');
+          return;
         }
       } catch (err) {
         console.warn('Firestore login check err/timeout:', err);
       }
     }
 
+    // Offline / fallback local cache check
     if (local) {
       proceedLogin(local);
     } else {
@@ -2039,10 +2046,7 @@ setInterval(refreshLiveStore, 2000);
   function renderGrid() {
     const cardsSec = $('cards');
     if (!cardsSec.classList.contains('hidden')) { renderCardGrid(); return; }
-    const baseList = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
-    const otherList = currentGroup === 'pc' ? MOBILE_PANELS : PC_PANELS;
-    const extraMaint = otherList.filter(p => isMaintenance(p.name));
-    const list = baseList.concat(extraMaint);
+    const list = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
     panelGrid.innerHTML = list.map(p => {
       const base1h = p.prices[0];
       const { price, off } = priceAfter(base1h);

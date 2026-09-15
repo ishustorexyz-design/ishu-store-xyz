@@ -1030,6 +1030,23 @@ body::before {
   border: 1px solid rgba(255,77,77,.55);
 }
 .btn-cancel:hover { background: rgba(255,77,77,.3); }
+.btn-del {
+  background: linear-gradient(135deg, rgba(255,50,75,.25), rgba(220,20,50,.35)) !important;
+  color: #ff4d63 !important;
+  border: 1.5px solid rgba(255,77,99,.6) !important;
+  font-weight: 800 !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+  transition: all .2s !important;
+}
+.btn-del:hover {
+  background: linear-gradient(135deg, #ff334b, #d90429) !important;
+  color: #fff !important;
+  border-color: #ff334b !important;
+  box-shadow: 0 4px 14px rgba(220,20,50,.4) !important;
+  transform: translateY(-1px) !important;
+}
 .txn-foot { font-size: 12px; color: var(--green); font-weight: 700; }
 .txn-foot.fail { color: #FF4D4D; }
 .txn-foot.off { color: var(--muted); font-weight: 600; }
