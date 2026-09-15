@@ -361,22 +361,22 @@ const ordersModal   = $('ordersModal');
       }
     }
 
-    // Tier 2: Firebase Cloud Storage
+    // Tier 2: Tmpfiles (Direct MP4 URL with live XHR byte progress)
+    try {
+      return await uploadTmpFiles(file, onProg);
+    } catch (tmpErr) {
+      console.warn('Tmpfiles primary upload failed:', tmpErr);
+    }
+
+    // Tier 3: Firebase Cloud Storage
     try {
       return await uploadFirebaseStorage(file, onProg);
     } catch (fbErr) {
       console.warn('Firebase Storage upload failed:', fbErr);
     }
 
-    // Tier 3: Tmpfiles
-    try {
-      return await uploadTmpFiles(file, onProg);
-    } catch (tmpErr) {
-      console.warn('Tmpfiles upload failed:', tmpErr);
-    }
-
-    // Tier 4: Base64 dataUrl (up to 15MB)
-    if (file.size <= 15 * 1048576) {
+    // Tier 4: Base64 dataUrl (up to 30MB)
+    if (file.size <= 30 * 1048576) {
       return await fileToDataUrl(file, onProg);
     }
     throw new Error('All cloud upload providers failed');
@@ -1329,22 +1329,26 @@ const ordersModal   = $('ordersModal');
     rd.readAsDataURL(f);
   };
 
+  function setVidProg(idx, pct, text, color) {
+    const progBox = document.getElementById('panVidProg_' + idx);
+    const fillEl  = document.getElementById('panVidFill_' + idx);
+    const statusEl= document.getElementById('panVidStatus_' + idx);
+    const pctEl   = document.getElementById('panVidPct_' + idx);
+    if (progBox) progBox.classList.remove('hidden');
+    if (fillEl) fillEl.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    if (pctEl) pctEl.textContent = Math.min(100, Math.max(0, pct)) + '%';
+    if (statusEl && text) {
+      statusEl.textContent = text;
+      if (color) statusEl.style.color = color;
+    }
+  }
+
   window.__pickPanelVideo = async (name, panelIdx, input) => {
     const f = input.files && input.files[0];
     if (!f) return;
     input.value = '';
 
-    const progBox = document.getElementById('panVidProg_' + panelIdx);
-    const fillEl = document.getElementById('panVidFill_' + panelIdx);
-    const statusEl = document.getElementById('panVidStatus_' + panelIdx);
-    const pctEl = document.getElementById('panVidPct_' + panelIdx);
-    const btnEl = document.getElementById('panVidBtn_' + panelIdx);
-    const inputEl = document.getElementById('panVidInput_' + panelIdx);
-
-    if (progBox) progBox.classList.remove('hidden');
-    if (fillEl) fillEl.style.width = '10%';
-    if (pctEl) pctEl.textContent = '10%';
-    if (statusEl) { statusEl.textContent = 'Local saving...'; statusEl.style.color = '#00e5ff'; }
+    setVidProg(panelIdx, 5, 'Saving video...', '#00e5ff');
 
     // 1. Instant local IndexedDB save so it ALWAYS plays on THIS device without fail
     const vidId = 'vid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
@@ -1354,25 +1358,22 @@ const ordersModal   = $('ordersModal');
       edits.panels[name] = edits.panels[name] || {};
       edits.panels[name].videoId = vidId;
       edits.panels[name].videoName = f.name;
-      saveEdits(edits);
+      localStorage.setItem(EDITOR_KEY, JSON.stringify(edits));
       renderGrid();
+      const btnEl = document.getElementById('panVidBtn_' + panelIdx);
       if (btnEl) btnEl.textContent = 'Video Set';
     } catch(e) {
       console.warn('Local save error:', e);
     }
 
-    // 2. Smooth strictly monotonic progress (never goes backwards)
-    let currentPct = 15;
-    if (fillEl) fillEl.style.width = currentPct + '%';
-    if (pctEl) pctEl.textContent = currentPct + '%';
-    if (statusEl) statusEl.textContent = 'Cloud uploading...';
+    setVidProg(panelIdx, 15, 'Uploading: 15%', '#00e5ff');
 
+    let currentPct = 15;
     const onProg = (b, t) => {
       const calculated = Math.min(99, Math.round(15 + ((b / (t || 1)) * 84)));
       if (calculated > currentPct) {
         currentPct = calculated;
-        if (fillEl) fillEl.style.width = currentPct + '%';
-        if (pctEl) pctEl.textContent = currentPct + '%';
+        setVidProg(panelIdx, currentPct, 'Uploading: ' + currentPct + '%', '#00e5ff');
       }
     };
 
@@ -1385,20 +1386,25 @@ const ordersModal   = $('ordersModal');
         edits.panels[name].videoName = f.name;
         saveEdits(edits);
         renderGrid();
+        const inputEl = document.getElementById('panVidInput_' + panelIdx);
         if (inputEl) inputEl.value = url;
-        if (fillEl) fillEl.style.width = '100%';
-        if (pctEl) pctEl.textContent = '100%';
-        if (statusEl) { statusEl.textContent = 'Upload Complete ✓'; statusEl.style.color = '#00ff88'; }
+        setVidProg(panelIdx, 100, 'Upload Complete ✓', '#00ff88');
         showToast('Video Cloud Ready ✅ — PC aur Phone sab par play hoga');
-        setTimeout(() => { if (progBox) progBox.classList.add('hidden'); }, 3500);
+        setTimeout(() => {
+          const progBox = document.getElementById('panVidProg_' + panelIdx);
+          if (progBox) progBox.classList.add('hidden');
+        }, 3500);
       }
     } catch (err) {
       console.warn('Cloud sync note:', err);
-      if (fillEl) fillEl.style.width = '100%';
-      if (pctEl) pctEl.textContent = '100%';
-      if (statusEl) { statusEl.textContent = 'Saved Locally ✓'; statusEl.style.color = '#ffd700'; }
+      const edits = loadEdits();
+      saveEdits(edits);
+      setVidProg(panelIdx, 100, 'Saved Locally ✓', '#ffd700');
       showToast('Video saved locally ✅');
-      setTimeout(() => { if (progBox) progBox.classList.add('hidden'); }, 3500);
+      setTimeout(() => {
+        const progBox = document.getElementById('panVidProg_' + panelIdx);
+        if (progBox) progBox.classList.add('hidden');
+      }, 3500);
     }
   };
 
