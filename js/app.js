@@ -373,41 +373,58 @@ const ordersModal   = $('ordersModal');
 
       // 2. Live Store Edits Listener (Panel icons, APKs, Video URLs, Custom Prices)
       fb.fs.collection('system').doc('edits').onSnapshot(doc => {
-        if (!doc.exists) return;
-        const v = doc.data() || {};
-        if (fb.applying) return;
-        localStorage.setItem(EDITOR_KEY, JSON.stringify(v));
-        renderGrid();
-        if (currentOwner && !ownerPanels.classList.contains('hidden')) renderOwnerPanels();
+        if (doc && doc.exists) {
+          const v = doc.data() || {};
+          if (fb.applying) return;
+          localStorage.setItem(EDITOR_KEY, JSON.stringify(v));
+          renderGrid();
+          if (currentOwner && !ownerPanels.classList.contains('hidden')) renderOwnerPanels();
+        } else {
+          // Cloud empty: push local edits if available
+          const local = loadEdits();
+          if (local && (Object.keys(local.panels || {}).length || Object.keys(local.cards || {}).length)) {
+            fb.fs.collection('system').doc('edits').set(local).catch(() => {});
+          }
+        }
       }, err => console.warn('edits sync error:', err));
 
       // 3. Live Maintenance Mode Listener (Reflects across PC & Mobile instantly)
       fb.fs.collection('system').doc('maint').onSnapshot(doc => {
-        if (!doc.exists) return;
-        const v = doc.data() || {};
-        if (fb.applying) return;
-        localStorage.setItem(MAINT_KEY, JSON.stringify(v));
-        renderGrid();
+        if (doc && doc.exists) {
+          const v = doc.data() || {};
+          if (fb.applying) return;
+          localStorage.setItem(MAINT_KEY, JSON.stringify(v));
+          renderGrid();
+          if (currentOwner && !ownerPanels.classList.contains('hidden')) renderOwnerPanels();
+        } else {
+          // Cloud empty: push local maintenance if available
+          const local = loadMaint();
+          if (local && Object.keys(local).length) {
+            fb.fs.collection('system').doc('maint').set(local).catch(() => {});
+          }
+        }
       }, err => console.warn('maint sync error:', err));
 
       // 4. Live Transactions Listener
       fb.fs.collection('system').doc('txns').onSnapshot(doc => {
-        if (!doc.exists) return;
-        const data = doc.data() || {};
-        const v = Array.isArray(data.list) ? data.list : [];
-        localStorage.setItem(TXN_KEY, JSON.stringify(v));
-        if (currentUser && !txnsModal.classList.contains('hidden')) renderTxns();
-        if (currentOwner) { renderOwnerVerify(); renderOwnerTxns(); renderOwnerDash(); }
+        if (doc && doc.exists) {
+          const data = doc.data() || {};
+          const v = Array.isArray(data.list) ? data.list : [];
+          localStorage.setItem(TXN_KEY, JSON.stringify(v));
+          if (currentUser && !txnsModal.classList.contains('hidden')) renderTxns();
+          if (currentOwner) { renderOwnerVerify(); renderOwnerTxns(); renderOwnerDash(); }
+        }
       }, err => console.warn('txns sync error:', err));
 
       // 5. Live Orders Listener
       fb.fs.collection('system').doc('orders').onSnapshot(doc => {
-        if (!doc.exists) return;
-        const data = doc.data() || {};
-        const v = Array.isArray(data.list) ? data.list : [];
-        localStorage.setItem(ORDERS_KEY, JSON.stringify(v));
-        if (currentUser && !ordersModal.classList.contains('hidden')) renderOrders();
-        if (currentOwner) { renderOwnerOrders(); renderOwnerDash(); }
+        if (doc && doc.exists) {
+          const data = doc.data() || {};
+          const v = Array.isArray(data.list) ? data.list : [];
+          localStorage.setItem(ORDERS_KEY, JSON.stringify(v));
+          if (currentUser && !ordersModal.classList.contains('hidden')) renderOrders();
+          if (currentOwner) { renderOwnerOrders(); renderOwnerDash(); }
+        }
       }, err => console.warn('orders sync error:', err));
 
     } catch (e) {
@@ -1208,24 +1225,30 @@ window.__pickCardImg = (name, input) => {
     rd.readAsDataURL(f);
   };
 
-  window.__pickPanelVideo = (name, input) => {
-    const f = input.files[0];
+  window.__pickPanelVideo = async (name, input) => {
+    const f = input.files && input.files[0];
     if (!f) return;
-    showToast('Video upload ho raha hai — big file bhi chalega (IndexedDB)...');
-    const vid = 'vid_' + Date.now().toString(36) + '_' + name;
-    filePut(vid, f).then(() => {
+    showToast('Video cloud par upload ho raha hai (0→100%)...');
+    input.value = '';
+    try {
+      const url = await universalUpload(f, (b, t) => {
+        const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
+        showToast('Video uploading... ' + pct + '%');
+      });
+      if (!url) throw new Error('No URL returned');
       const edits = loadEdits();
       edits.panels[name] = edits.panels[name] || {};
-      if (edits.panels[name].videoId) fileDel(edits.panels[name].videoId).catch(()=>{});
-      edits.panels[name].videoId = vid;
+      edits.panels[name].videoUrl = url;
       edits.panels[name].videoName = f.name;
-      delete edits.panels[name].videoUrl;
+      delete edits.panels[name].videoId;
       saveEdits(edits);
-      showToast('Video uploaded ✅ — tile pe play button aa gaya');
+      showToast('Video uploaded ✅ — PC aur Phone dono par turant play hoga');
       renderOwner('panels');
       renderGrid();
-    }).catch(() => showToast('Video upload failed — try again'));
-    input.value = '';
+    } catch (err) {
+      console.error('Video upload error:', err);
+      showToast('Video upload failed — phir se try karein');
+    }
   };
 
   window.__setPanelVideoUrl = (name, url) => {
@@ -1374,34 +1397,43 @@ videoPlayer.load();
   window.__savePanel = async (i, name) => {
     const edits = loadEdits();
     const rows = document.querySelectorAll('#mats_' + i + ' .mat-editor-row');
-    const pending = [];
     for (const row of Array.from(rows)) {
       const j = row.getAttribute('data-j');
       const f = (window._apkFiles || {})[i + '_' + j];
       if (f) {
-        const apkId = 'mat_' + Date.now().toString(36) + '_' + i + '_' + j;
-        await filePut(apkId, f);
-        row.setAttribute('data-apkid', apkId);
-        row.setAttribute('data-apkname', f.name.replace(/"/g, '&quot;'));
-        delete window._apkFiles[i + '_' + j];
+        showToast('Uploading ' + f.name + ' to cloud...');
+        try {
+          const cloudUrl = await universalUpload(f, (b, t) => {
+            const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
+            showToast('File upload: ' + pct + '%');
+          });
+          if (cloudUrl) {
+            const urlInput = row.querySelector('.mat-url');
+            if (urlInput) urlInput.value = cloudUrl;
+            row.setAttribute('data-apkname', f.name.replace(/"/g, '&quot;'));
+            delete window._apkFiles[i + '_' + j];
+          }
+        } catch (err) {
+          console.error('APK file upload failed:', err);
+        }
       }
     }
     const mats = Array.from(rows).map(row => {
       const label = row.querySelector('.mat-label').value.trim();
       const url = row.querySelector('.mat-url').value.trim();
-      const apkId = row.getAttribute('data-apkid') || '';
       const apkName = (row.getAttribute('data-apkname') || '').replace(/&quot;/g, '"');
       return {
-        label: label || (apkId ? (apkName || 'APK File') : (url ? 'Open Link' : '')),
-        url, apkId, apkName,
+        label: label || (url ? (apkName || 'Download File') : 'Open Link'),
+        url,
+        apkName,
         icon: (row.getAttribute('data-icon') || '').replace(/&quot;/g, '"'),
         iconUrl: (row.querySelector('.mat-icon-url').value || '').trim()
       };
-    }).filter(m => m.label || m.url || m.apkId);
+    }).filter(m => m.label || m.url);
     edits.panels[name] = edits.panels[name] || {};
     edits.panels[name].mats = mats;
     saveEdits(edits);
-    showToast(name + ' saved — LIVE reflect ho gaya ✅');
+    showToast(name + ' saved — LIVE reflect ho gaya ✅ (PC aur Mobile dono par sync ON)');
     renderOwner('panels');
     renderGrid();
   };
