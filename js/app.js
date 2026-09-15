@@ -316,7 +316,8 @@ const ordersModal   = $('ordersModal');
     const ref = st.ref(path);
     const task = ref.put(file, { contentType: file.type || 'application/octet-stream' });
 
-    return new Promise((resolve, reject) => {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase Storage timeout')), 15000));
+    const uploadP = new Promise((resolve, reject) => {
       task.on('state_changed',
         snap => {
           if (typeof onProg === 'function' && snap.totalBytes > 0) {
@@ -334,18 +335,7 @@ const ordersModal   = $('ordersModal');
         }
       );
     });
-  }
-
-  async function uploadCatbox(file, onProg) {
-    const fd = new FormData();
-    fd.append('reqtype', 'fileupload');
-    fd.append('time', '72h');
-    fd.append('fileToUpload', file);
-    const res = await uploadViaXhr('https://litterbox.catbox.moe/resources/internals/api.php', fd, onProg);
-    if (typeof res === 'string' && res.startsWith('http')) {
-      return res.trim();
-    }
-    throw new Error('Catbox upload failed');
+    return Promise.race([uploadP, timeout]);
   }
 
   async function uploadTmpFiles(file, onProg) {
@@ -362,14 +352,7 @@ const ordersModal   = $('ordersModal');
     if (!file) throw new Error('No file provided');
     const isImg = (file.type || '').startsWith('image/');
 
-    // Tier 1: Firebase Cloud Storage (Direct high-speed streaming on iOS/Android/PC)
-    try {
-      return await uploadFirebaseStorage(file, onProg);
-    } catch (fbErr) {
-      console.warn('Firebase Storage upload failed, attempting fallback providers:', fbErr);
-    }
-
-    // Tier 2: Freeimage for Photos
+    // Tier 1: FreeImage for Photos (instant, permanent)
     if (isImg) {
       try {
         return await uploadImageFreeImage(file, onProg);
@@ -378,25 +361,25 @@ const ordersModal   = $('ordersModal');
       }
     }
 
-    // Tier 3: Catbox / Litterbox CDN
+    // Tier 2: Firebase Cloud Storage
     try {
-      return await uploadCatbox(file, onProg);
-    } catch (catErr) {
-      console.warn('Catbox upload failed:', catErr);
+      return await uploadFirebaseStorage(file, onProg);
+    } catch (fbErr) {
+      console.warn('Firebase Storage upload failed:', fbErr);
     }
 
-    // Tier 4: Tmpfiles
+    // Tier 3: Tmpfiles
     try {
       return await uploadTmpFiles(file, onProg);
     } catch (tmpErr) {
       console.warn('Tmpfiles upload failed:', tmpErr);
     }
 
-    // Tier 5: Local Base64 fallback (for small files)
-    if (file.size <= 5 * 1048576) {
+    // Tier 4: Base64 dataUrl (up to 15MB)
+    if (file.size <= 15 * 1048576) {
       return await fileToDataUrl(file, onProg);
     }
-    throw new Error('Upload failed across all providers — check file size or network');
+    throw new Error('All cloud upload providers failed');
   }
 
   const fbUpload = (path, blob, onProg) => universalUpload(blob, onProg);
@@ -1330,26 +1313,44 @@ window.__pickCardImg = (name, input) => {
   window.__pickPanelVideo = async (name, input) => {
     const f = input.files && input.files[0];
     if (!f) return;
-    showToast('Video cloud par upload ho raha hai (0→100%)...');
+    showToast('Video save ho raha hai...');
     input.value = '';
+
+    // 1. Instant local IndexedDB save so it ALWAYS plays on THIS device without fail
+    const vidId = 'vid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    try {
+      await filePut(vidId, f);
+      const edits = loadEdits();
+      edits.panels[name] = edits.panels[name] || {};
+      edits.panels[name].videoId = vidId;
+      edits.panels[name].videoName = f.name;
+      saveEdits(edits);
+      renderOwner('panels');
+      renderGrid();
+      showToast('Video saved ✅ — uploading to cloud...');
+    } catch(e) {
+      console.warn('Local save error:', e);
+    }
+
+    // 2. Cloud upload for multi-device sync
     try {
       const url = await universalUpload(f, (b, t) => {
         const pct = Math.min(100, Math.round((b / (t || 1)) * 100));
-        showToast('Video uploading... ' + pct + '%');
+        showToast('Cloud upload: ' + pct + '%');
       });
-      if (!url) throw new Error('No URL returned');
-      const edits = loadEdits();
-      edits.panels[name] = edits.panels[name] || {};
-      edits.panels[name].videoUrl = url;
-      edits.panels[name].videoName = f.name;
-      delete edits.panels[name].videoId;
-      saveEdits(edits);
-      showToast('Video uploaded ✅ — PC aur Phone dono par turant play hoga');
-      renderOwner('panels');
-      renderGrid();
+      if (url) {
+        const edits = loadEdits();
+        edits.panels[name] = edits.panels[name] || {};
+        edits.panels[name].videoUrl = url;
+        edits.panels[name].videoName = f.name;
+        saveEdits(edits);
+        renderOwner('panels');
+        renderGrid();
+        showToast('Video Cloud Ready ✅ — PC aur Phone sab par play hoga');
+      }
     } catch (err) {
-      console.error('Video upload error:', err);
-      showToast('Video upload failed — phir se try karein');
+      console.warn('Cloud sync note:', err);
+      showToast('Video saved locally ✅ (Online sync ke liye YouTube link bhi paste kar sakte hain)');
     }
   };
 
@@ -1452,7 +1453,7 @@ window.__pickCardImg = (name, input) => {
     if (videoModalTitle) videoModalTitle.textContent = name + ' — Demo Video';
     videoModal.classList.remove('hidden');
 
-    const embed = getVideoEmbedInfo(vid.url || '');
+    const embed = vid.url ? getVideoEmbedInfo(vid.url) : { type: 'none', src: '' };
 
     if (embed.type === 'iframe') {
       if (videoPlayer) {
@@ -1478,9 +1479,28 @@ window.__pickCardImg = (name, input) => {
       videoPlayer.setAttribute('webkit-playsinline', '');
       videoPlayer.controls = true;
 
+      const playBlob = async () => {
+        if (!vid.id) return false;
+        try {
+          const blob = await fileGet(vid.id);
+          if (blob) {
+            videoPlayer.src = URL.createObjectURL(blob);
+            videoPlayer.load();
+            videoPlayer.play().catch(() => {});
+            return true;
+          }
+        } catch(e) {}
+        return false;
+      };
+
       if (embed.type === 'video' && embed.src) {
         videoPlayer.src = embed.src;
         videoPlayer.load();
+        videoPlayer.onerror = async () => {
+          console.warn('Cloud video URL failed, attempting local fallback...');
+          const ok = await playBlob();
+          if (!ok) showToast('Video play nahi ho paya — URL check karein');
+        };
         const p = videoPlayer.play();
         if (p !== undefined) {
           p.catch(err => {
@@ -1488,20 +1508,10 @@ window.__pickCardImg = (name, input) => {
           });
         }
       } else if (vid.id) {
-        try {
-          const blob = await fileGet(vid.id);
-          if (!blob) {
-            showToast('Video file nahi mili — owner se dobara upload karwaye');
-            videoModal.classList.add('hidden');
-            return;
-          }
-          videoPlayer.src = URL.createObjectURL(blob);
-          videoPlayer.load();
-          videoPlayer.play().catch(() => {});
-        } catch(e) {
-          showToast('Video load failed');
+        const ok = await playBlob();
+        if (!ok) {
+          showToast('Video file nahi mili — owner se dobara upload karwaye');
           videoModal.classList.add('hidden');
-          return;
         }
       }
     }
