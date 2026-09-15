@@ -395,9 +395,12 @@
 <div id="videoModal" class="modal hidden">
   <div class="modal-card modal-wide">
     <button class="modal-close" id="closeVideoBtn">✕</button>
-    <h3>Panel Demo</h3>
-    <p class="modal-sub">Play dabao — bas tabhi video chale gi (autoplay nahi)</p>
-    <video id="videoPlayer" class="video-player" controls preload="none"></video>
+    <h3 id="videoModalTitle">Panel Demo</h3>
+    <p class="modal-sub">Play video tutorial</p>
+    <div id="videoContainer" class="video-container">
+      <video id="videoPlayer" class="video-player" controls playsinline preload="metadata"></video>
+      <iframe id="videoIframe" class="video-player hidden" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
   </div>
 </div>
 
@@ -410,6 +413,22 @@
         <strong>OWNER · ISHU STORE</strong>
         <small>Online · replies instantly</small>
       </div>
+      <div class="support-nav-btns">
+        <button id="tfHistoryBtn" class="btn btn-sm btn-ghost" title="Support History">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          My Tickets
+        </button>
+        <button id="tfCreateBtn" class="btn btn-sm btn-primary" title="New Ticket">
+          ＋ New Ticket
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════ TICKET HISTORY / MY TICKETS ═══════════ -->
+    <div id="ticketHistoryPanel" class="ticket-history hidden">
+      <p class="tf-title">My Support Tickets</p>
+      <p class="modal-sub">Tap any ticket to continue live chat across PC and Mobile</p>
+      <div id="userTicketsList" class="user-tickets-list"></div>
     </div>
 
     <!-- ═══════════ TICKET CREATION FORM ═══════════ -->
@@ -468,6 +487,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=24"></script>
+<script src="js/app.js?v=26"></script>
 </body>
 </html>

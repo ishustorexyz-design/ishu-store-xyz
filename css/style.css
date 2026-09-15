@@ -1594,3 +1594,28 @@ body::before {
 .badge-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: .5px; }
 .badge-pill.live { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.4); }
 .badge-pill.off { background: rgba(255,80,80,.15); color: #ff5050; border: 1px solid rgba(255,80,80,.4); }
+
+/* ---------- USER SUPPORT TICKET HISTORY & VIDEO MODAL ---------- */
+.support-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.support-nav-btns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.support-nav-btns .btn { padding: 5px 9px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; }
+.ticket-history { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; max-height: 55vh; }
+.user-tickets-list { display: flex; flex-direction: column; gap: 8px; }
+.user-tick-item {
+  padding: 10px 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px;
+  background: rgba(255,255,255,.03); cursor: pointer; transition: .2s;
+  display: flex; flex-direction: column; gap: 4px; text-align: left; width: 100%;
+}
+.user-tick-item:hover { border-color: rgba(255,215,0,.4); background: rgba(255,215,0,.06); }
+.user-tick-item.active { border-color: #ffd700; background: rgba(255,215,0,.1); }
+.user-tick-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.user-tick-head strong { color: #fff; font-size: 12.5px; }
+.user-tick-preview { font-size: 12px; color: #b8bdcf; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-tick-foot { font-size: 10.5px; color: #8b92a7; display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+.video-container { position: relative; width: 100%; margin-top: 10px; }
+.video-container iframe.video-player { width: 100%; height: 360px; border-radius: 12px; border: 1px solid rgba(0,229,255,.35); background: #000; }
+@media (max-width: 600px) {
+  .video-container iframe.video-player { height: 220px; }
+  .support-nav-btns { flex-wrap: wrap; }
+}
+

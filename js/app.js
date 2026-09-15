@@ -114,6 +114,10 @@ const ordersModal   = $('ordersModal');
   const supportSend     = $('supportSend');
   const ticketFormPanel = $('ticketFormPanel');
   const ticketChatPanel = $('ticketChatPanel');
+  const ticketHistoryPanel = $('ticketHistoryPanel');
+  const userTicketsList = $('userTicketsList');
+  const tfHistoryBtn    = $('tfHistoryBtn');
+  const tfCreateBtn     = $('tfCreateBtn');
   const tfUid           = $('tfUid');
   const tfCat           = $('tfCat');
   const tfMsg           = $('tfMsg');
@@ -124,6 +128,8 @@ const ordersModal   = $('ordersModal');
   const videoModal      = $('videoModal');
   const closeVideoBtn   = $('closeVideoBtn');
   const videoPlayer     = $('videoPlayer');
+  const videoIframe     = $('videoIframe');
+  const videoModalTitle = $('videoModalTitle');
 
   const ddUid = $('ddUid');
   let currentOwner = false;
@@ -1323,22 +1329,66 @@ window.__pickCardImg = (name, input) => {
     window.open(link, '_blank');
   };
 
+  function getYouTubeEmbedUrl(url) {
+    if (!url) return '';
+    const str = url.trim();
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+    const match = str.match(regExp);
+    if (match && match[2].length === 11) {
+      return 'https://www.youtube.com/embed/' + match[2] + '?autoplay=1&rel=0';
+    }
+    return '';
+  }
+
   window.__playPanelVideo = async name => {
     const vid = panelVideo(name);
-    if (!vid) { showToast('Is panel me koi video nahi hai'); return; }
-    videoModal.classList.remove('hidden');
-    videoPlayer.removeAttribute('src');
-    if (vid.url) {
-      videoPlayer.src = vid.url;
-    } else if (vid.id) {
-      try {
-        const blob = await fileGet(vid.id);
-        if (!blob) { showToast('Video file nahi mili'); videoModal.classList.add('hidden'); return; }
-        videoPlayer.src = URL.createObjectURL(blob);
-      } catch(e) { showToast('Video load failed'); videoModal.classList.add('hidden'); return; }
+    if (!vid || (!vid.url && !vid.id)) {
+      showToast('Is panel me koi video nahi hai');
+      return;
     }
-videoPlayer.load();
-    /* AUTO PLAY NAHI — user ko khud play dabana hai */
+    if (videoModalTitle) videoModalTitle.textContent = name + ' — Demo Video';
+    videoModal.classList.remove('hidden');
+
+    const ytEmbed = getYouTubeEmbedUrl(vid.url || '');
+    if (ytEmbed) {
+      if (videoPlayer) {
+        videoPlayer.classList.add('hidden');
+        videoPlayer.removeAttribute('src');
+      }
+      if (videoIframe) {
+        videoIframe.classList.remove('hidden');
+        videoIframe.src = ytEmbed;
+      }
+      return;
+    }
+
+    if (videoIframe) {
+      videoIframe.classList.add('hidden');
+      videoIframe.src = '';
+    }
+    if (videoPlayer) {
+      videoPlayer.classList.remove('hidden');
+      videoPlayer.removeAttribute('src');
+      if (vid.url) {
+        videoPlayer.src = vid.url;
+        videoPlayer.load();
+      } else if (vid.id) {
+        try {
+          const blob = await fileGet(vid.id);
+          if (!blob) {
+            showToast('Video file nahi mili — owner se dobara upload karwaye');
+            videoModal.classList.add('hidden');
+            return;
+          }
+          videoPlayer.src = URL.createObjectURL(blob);
+          videoPlayer.load();
+        } catch(e) {
+          showToast('Video load failed');
+          videoModal.classList.add('hidden');
+          return;
+        }
+      }
+    }
   };
 
   window.__matApk = (i, j, input) => {
@@ -1501,19 +1551,30 @@ videoPlayer.load();
     const txns = loadTxns().filter(t => t.status === 'pending').sort((a, b) => Number(b.received || false) - Number(a.received || false) || a.createdAt - b.createdAt);
     const info = `<div class="verify-info">
       <strong>Payment Verification Center</strong>
-      <p>Verify user payment UTR and screenshot receipts. Click <b>Verify &amp; Credit</b> to credit amount to user's wallet immediately or <b>Reject</b> if invalid.</p>
+      <p>Verify user payment UTR and screenshot / video receipts. Click <b>Verify &amp; Credit</b> to credit amount to user's wallet immediately or <b>Reject</b> if invalid.</p>
     </div>`;
     const rows = [];
     for (const t of txns) {
       let ssHtml = '';
+      const isVid = (t.ssType || '').startsWith('video/') || (t.ssUrl && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(t.ssUrl));
       if (t.ssUrl) {
-        ssHtml = `<div class="ss-preview-box">
-          <img class="ss-preview" src="${t.ssUrl}" alt="Payment Screenshot" onclick="window.open('${t.ssUrl}', '_blank')" title="Click to open full view" style="cursor:zoom-in" loading="lazy">
-          <a href="${t.ssUrl}" target="_blank" rel="noopener" class="ss-link">
-            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            View Full Screenshot
-          </a>
-        </div>`;
+        if (isVid) {
+          ssHtml = `<div class="ss-preview-box">
+            <video class="ss-preview" controls playsinline preload="metadata" src="${t.ssUrl}" style="max-height:220px;width:100%;border-radius:8px;"></video>
+            <a href="${t.ssUrl}" target="_blank" rel="noopener" class="ss-link">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Open / Download Video Proof
+            </a>
+          </div>`;
+        } else {
+          ssHtml = `<div class="ss-preview-box">
+            <img class="ss-preview" src="${t.ssUrl}" alt="Payment Screenshot" onclick="window.open('${t.ssUrl}', '_blank')" title="Click to open full view" style="cursor:zoom-in" loading="lazy">
+            <a href="${t.ssUrl}" target="_blank" rel="noopener" class="ss-link">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              View Full Screenshot
+            </a>
+          </div>`;
+        }
       } else if (t.ssKey) {
         try {
           const blob = await fileGet(t.ssKey);
@@ -1521,13 +1582,13 @@ videoPlayer.load();
             const url = URL.createObjectURL(blob);
             ssHtml = `<div class="ss-preview-box"><img class="ss-preview" src="${url}" alt="Screenshot" onclick="window.open('${url}')" style="cursor:zoom-in"><a href="${url}" target="_blank" class="ss-link">View Screenshot</a></div>`;
           } else {
-            ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
+            ssHtml = `<div>Proof: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
           }
         } catch(e) {
-          ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
+          ssHtml = `<div>Proof: <span class="mono">${escapeHtml(t.ss || 'receipt')}</span></div>`;
         }
       } else if (t.ss) {
-        ssHtml = `<div>Screenshot: <span class="mono">${escapeHtml(t.ss)}</span></div>`;
+        ssHtml = `<div>Proof: <span class="mono">${escapeHtml(t.ss)}</span></div>`;
       }
       rows.push(`
       <div class="admin-row col" style="border-color:${t.received ? 'rgba(255,106,0,.45)' : 'rgba(255,255,255,.06)'}">
@@ -1535,7 +1596,7 @@ videoPlayer.load();
           <strong class="mono">${escapeHtml(t.id)}</strong>
           <small>${escapeHtml(t.user)} · ₹${t.amount} · ${new Date(t.createdAt).toLocaleString()}</small>
         </div>
-        ${t.received ? '<div class="gold" style="font-weight:700">● UTR &amp; SCREENSHOT SUBMITTED — awaiting your confirmation</div>' : ''}
+        ${t.received ? '<div class="gold" style="font-weight:700">● UTR &amp; PAYMENT PROOF SUBMITTED — awaiting your confirmation</div>' : ''}
         ${t.utr ? `<div class="gold">UTR / Ref: <span class="mono">${escapeHtml(t.utr)}</span></div>` : ''}
         ${ssHtml}
         <div class="verify-actions">
@@ -1635,7 +1696,69 @@ videoPlayer.load();
     </div>`;
   }
 
-  /* ─── USER SIDE: create ticket / cross-device live chat ─── */
+  /* ─── USER SIDE: create ticket / cross-device live chat / ticket history ─── */
+  async function openUserTicketHistory() {
+    if (!currentUser) { showToast('Login first'); return; }
+    ticketFormPanel.classList.add('hidden');
+    ticketChatPanel.classList.add('hidden');
+    ticketHistoryPanel.classList.remove('hidden');
+
+    const uLower = currentUser.username.toLowerCase();
+    userTicketsList.innerHTML = '<div class="empty-state">Loading your support tickets...</div>';
+
+    let userTicks = [];
+    if (fb.fs) {
+      try {
+        const snap = await fb.fs.collection('tickets')
+          .where('user', '==', uLower)
+          .orderBy('lastUpdated', 'desc')
+          .get();
+        snap.forEach(d => userTicks.push(Object.assign({ id: d.id }, d.data())));
+      } catch (err) {
+        console.warn('History query fail:', err);
+      }
+    }
+
+    if (!userTicks.length && Array.isArray(allTickets) && allTickets.length) {
+      userTicks = allTickets.filter(t => (t.user || '').toLowerCase() === uLower || (t.username || '').toLowerCase() === uLower);
+    }
+
+    if (!userTicks.length) {
+      userTicketsList.innerHTML = `
+        <div class="empty-state">
+          <p>Aapki koi support tickets nahi hain.</p>
+          <button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="window.newTicketReset()">+ Create First Ticket</button>
+        </div>`;
+      return;
+    }
+
+    userTicketsList.innerHTML = userTicks.map(t => {
+      const st = (t.status || 'OPEN').toUpperCase();
+      const stCls = 'st-' + (t.status || 'OPEN').toLowerCase();
+      const time = t.lastUpdated ? fmtTickTime(t.lastUpdated) : (t.createdAt ? fmtTickTime(t.createdAt) : '');
+      const prev = escapeHtml((t.lastText || 'No message content').slice(0, 80));
+      const cat = escapeHtml(t.category || 'Support');
+      const isAct = activeTicketId === t.id;
+      return `
+        <div class="user-tick-item ${isAct ? 'active' : ''}" onclick="window.__selectUserTicket('${t.id}')">
+          <div class="user-tick-head">
+            <strong>${escapeHtml(t.ticketId || t.id)} <span class="muted2">· ${cat}</span></strong>
+            <span class="ticket-status ${stCls}">${st}</span>
+          </div>
+          <div class="user-tick-preview">${prev}</div>
+          <div class="user-tick-foot">
+            <span>Last activity: ${time}</span>
+            <span class="gold" style="font-weight:700">Open Thread →</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  window.__selectUserTicket = tid => {
+    ticketHistoryPanel.classList.add('hidden');
+    startTicketThread(tid);
+  };
+
   async function openUserSupport() {
     if (!currentUser) { showToast('Login first'); return; }
     supportModal.classList.remove('hidden');
@@ -1670,14 +1793,16 @@ videoPlayer.load();
 
     const u = loadUsers()[currentUser.username] || {};
     if (!tfUid.value) tfUid.value = u.uid || currentUser.username || '';
-    ticketFormPanel.classList.remove('hidden');
+    ticketHistoryPanel.classList.add('hidden');
     ticketChatPanel.classList.add('hidden');
+    ticketFormPanel.classList.remove('hidden');
   }
 
   function startTicketThread(tid) {
     if (!fb.fs) { showToast('Backend offline — try later'); return; }
     activeTicketId = tid;
     localStorage.setItem(ACTIVE_TICKET_KEY, tid);
+    ticketHistoryPanel.classList.add('hidden');
     ticketFormPanel.classList.add('hidden');
     ticketChatPanel.classList.remove('hidden');
     const inputRow = ticketChatPanel.querySelector('.support-input-row');
@@ -1777,6 +1902,7 @@ videoPlayer.load();
     activeTicketId = '';
     localStorage.removeItem(ACTIVE_TICKET_KEY);
     if (tickUserUnsub) tickUserUnsub();
+    ticketHistoryPanel.classList.add('hidden');
     ticketChatPanel.classList.add('hidden');
     ticketFormPanel.classList.remove('hidden');
     const u = loadUsers()[currentUser.username] || {};
@@ -2064,6 +2190,8 @@ videoPlayer.load();
   /* ─── Support modal wiring ─── */
   closeSupportBtn.addEventListener('click', () => supportModal.classList.add('hidden'));
   supportFab.addEventListener('click', openUserSupport);
+  if (tfHistoryBtn) tfHistoryBtn.addEventListener('click', openUserTicketHistory);
+  if (tfCreateBtn) tfCreateBtn.addEventListener('click', newTicketReset);
   tfSubmit.addEventListener('click', createTicket);
   tfNewBtn.addEventListener('click', newTicketReset);
   supportSend.addEventListener('click', sendTicketMsg);
@@ -2492,7 +2620,7 @@ setInterval(refreshLiveStore, 2000);
           </div>
 
           ${pending ? (sent
-            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''} — submitted, awaiting admin verification${t.ssUrl ? `<img class="shot-thumb" src="${t.ssUrl}" alt="" onclick="window.open('${t.ssUrl}')">` : (t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : '')}</div>`
+            ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Payment proof attached' : ''} — submitted, awaiting admin verification${t.ssUrl ? `<img class="shot-thumb" src="${t.ssUrl}" alt="Proof" onclick="window.open('${t.ssUrl}')">` : (t.ssKey ? `<img class="shot-thumb hidden" data-key="${t.ssKey}" alt="">` : '')}</div>`
             : `
             <div class="txn-timerbar" data-txn="${t.id}">
               <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -2505,9 +2633,9 @@ setInterval(refreshLiveStore, 2000);
             <div class="txn-verify">
               <input id="utr_${t.id}" class="txn-input" placeholder="UTR / Payment reference">
               <label class="txn-shot-label">
-                <input type="file" accept="image/*" id="shot_${t.id}" class="hs" hidden>
+                <input type="file" accept="image/*,video/*" id="shot_${t.id}" class="hs" hidden>
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0l-5 5m5-5l5 5"/><path d="M4 20h16"/></svg>
-                Screenshot
+                Proof (Screenshot/Video)
               </label>
             </div>
             <div class="txn-actions">
@@ -2524,7 +2652,7 @@ setInterval(refreshLiveStore, 2000);
                 Cancel
               </button>
             </div>`) : (t.status === 'paid'
-              ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Screenshot attached' : ''}</div>`
+              ? `<div class="txn-foot">${t.utr ? 'UTR: ' + t.utr : ''}${t.utr && t.ss ? ' · ' : ''}${t.ss ? 'Proof attached' : ''}</div>`
               : (t.status === 'failed' ? '<div class="txn-foot fail">Payment not completed in time — transaction failed</div>'
                 : (t.status === 'cancelled' ? '<div class="txn-foot off">Transaction cancelled</div>' : '')))}
         </div>`;
@@ -2546,7 +2674,7 @@ setInterval(refreshLiveStore, 2000);
   const txnUpls = {};
   function prepareTxnShot(id, file) {
     if (txnUpls[id] && txnUpls[id].p) return txnUpls[id].p;
-    if (file.size > 100 * 1048576) { showToast('Screenshot 100MB se choti rakho'); return Promise.resolve(''); }
+    if (file.size > 200 * 1048576) { showToast('File 200MB se choti rakho'); return Promise.resolve(''); }
     const item = document.getElementById('shot_' + id)?.closest('.txn-item');
     let wrap = item && item.querySelector('.up-prog');
     if (wrap) wrap.remove();
@@ -2589,13 +2717,18 @@ setInterval(refreshLiveStore, 2000);
       if (url) {
         const list = loadTxns();
         const rec = list.find(t => t.id === id);
-        if (rec) { rec.ssUrl = url; saveTxns(list); }
+        if (rec) {
+          rec.ssUrl = url;
+          rec.ss = file.name;
+          rec.ssType = file.type || '';
+          saveTxns(list);
+        }
       }
-      showToast('Screenshot upload successful ✓ — ab Verify & Submit dabao');
+      showToast('Proof upload successful ✓ — ab Verify & Submit dabao');
       if (wrap) setTimeout(() => { if (wrap && wrap.parentNode) wrap.remove(); }, 2500);
       return url || '';
     }).catch(err => {
-      console.warn('Screenshot upload err:', err);
+      console.warn('Proof upload err:', err);
       if (st) { st.textContent = 'Upload fail'; st.classList.add('err'); }
       showToast('Upload fail — phir try karo');
       return '';
@@ -2631,7 +2764,7 @@ setInterval(refreshLiveStore, 2000);
         if (txnUpls[id] && txnUpls[id].done && txnUpls[id].url) {
           ssUrl = txnUpls[id].url;
         } else {
-          showToast('Uploading screenshot...');
+          showToast('Uploading proof...');
           ssUrl = await prepareTxnShot(id, shot);
         }
       }
@@ -2640,9 +2773,10 @@ setInterval(refreshLiveStore, 2000);
       if (shot && !hit.ss) hit.ss = shot.name;
       if (shot && !hit.ssKey) hit.ssKey = 'ss_' + hit.id.toLowerCase();
       if (ssUrl) hit.ssUrl = ssUrl;
+      if (shot) hit.ssType = shot.type || '';
       saveTxns(all);
       renderTxns();
-      showToast('UTR + screenshot sent — admin will verify & credit wallet ✓');
+      showToast('UTR + proof submitted — admin will verify & credit wallet ✓');
     }
   };
 
@@ -2661,7 +2795,14 @@ setInterval(refreshLiveStore, 2000);
     txnsModal.classList.add('hidden');
     supportModal.classList.add('hidden');
     videoModal.classList.add('hidden');
-    if (videoPlayer && !videoPlayer.paused) videoPlayer.pause();
+    if (videoPlayer) {
+      if (!videoPlayer.paused) videoPlayer.pause();
+      videoPlayer.removeAttribute('src');
+      videoPlayer.load();
+    }
+    if (videoIframe) {
+      videoIframe.src = '';
+    }
   }
   closeDurationBtn.addEventListener('click', closeAllModals);
   closeDepositBtn.addEventListener('click', closeAllModals);
@@ -2693,17 +2834,37 @@ setInterval(refreshLiveStore, 2000);
     });
   }, 1000);
 
+  /* Helper to wipe all test user accounts on request */
+  window.__wipeTestUsers = async function() {
+    if (fb.fs) {
+      try {
+        const snap = await fb.fs.collection('users').get();
+        const batch = fb.fs.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log('[Firestore] All users wiped');
+      } catch(e) {
+        console.warn('Wipe users fail:', e);
+      }
+    }
+    localStorage.removeItem(USERS_KEY);
+    localStorage.removeItem(ORDERS_KEY);
+    localStorage.removeItem(TXN_KEY);
+    localStorage.removeItem(ACTIVE_TICKET_KEY);
+    showToast('All accounts wiped for fresh registration');
+  };
+
   /* ─────────── Init ─────────── */
   fbInit();
   setAuthMode('login');
   renderGrid();
 
   /* One-time clean: Reset all old test accounts for fresh universal registration */
-  if (!localStorage.getItem('ishu_users_clean_v4')) {
+  if (!localStorage.getItem('ishu_users_clean_v5')) {
     localStorage.removeItem(USERS_KEY);
     localStorage.removeItem(ORDERS_KEY);
     localStorage.removeItem(TXN_KEY);
     localStorage.removeItem(ACTIVE_TICKET_KEY);
-    localStorage.setItem('ishu_users_clean_v4', '1');
+    localStorage.setItem('ishu_users_clean_v5', '1');
   }
 });
