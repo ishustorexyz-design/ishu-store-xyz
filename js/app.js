@@ -860,7 +860,7 @@ const ordersModal   = $('ordersModal');
   }
 
   /* ─────────── Google Sign-In (OAuth 2.0) ─────────── */
-  const GOOGLE_CLIENT_ID = '456607613890-k52do6laoke7i1e9qtoj2j3rv1rved1l.apps.googleusercontent.com';
+  const GOOGLE_CLIENT_ID = '456607613890-8j1pgdniiro1jm58gb0j9gf2pcpb25d4.apps.googleusercontent.com';
 
   function parseJwt(token) {
     try {
