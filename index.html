@@ -1,738 +1,346 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ISHU STORE XYZ</title>
-<link rel="icon" type="image/png" href="assets/img/logo/login-logo.png">
+<title>ISHU DEV STORE — Developer Tools & Merch</title>
+<link rel="icon" type="image/png" href="assets/img/shopping.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Cinzel:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=33">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0b0e17;
+    --bg2: #10152a;
+    --card: #151b33;
+    --card2: #1a2244;
+    --border: #232c52;
+    --txt: #e8ecff;
+    --muted: #8b93b8;
+    --accent: #6c7cff;
+    --accent2: #38d9a9;
+    --gold: #ffd166;
+    --danger: #ff6b81;
+  }
+  body { background: var(--bg); color: var(--txt); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+  nav.topbar { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px); background: rgba(11,14,23,0.82); border-bottom: 1px solid var(--border); }
+  nav.topbar .inner { display: flex; align-items: center; justify-content: space-between; height: 66px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: 0.5px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 17px; }
+  .brand span.acc { color: var(--accent2); }
+  .nav-links { display: flex; gap: 26px; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .nav-links a:hover { color: var(--txt); }
+  .nav-cta { display: flex; gap: 10px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font-weight: 700; font-size: 14px; border-radius: 10px; padding: 11px 18px; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; font-family: inherit; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #4f5bff); color: #fff; box-shadow: 0 8px 24px -8px rgba(108,124,255,.7); }
+  .btn-ghost { background: transparent; color: var(--txt); border: 1px solid var(--border); }
+  .btn-sm { padding: 8px 13px; font-size: 13px; border-radius: 8px; }
+
+  header.hero { position: relative; padding: 84px 0 66px; text-align: center; }
+  header.hero .glow { position: absolute; inset: auto; width: 520px; height: 520px; border-radius: 50%; filter: blur(120px); opacity: .28; pointer-events: none; }
+  .glow.a { background: var(--accent); top: -180px; left: 8%; }
+  .glow.b { background: var(--accent2); top: -120px; right: 6%; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(108,124,255,.12); border: 1px solid rgba(108,124,255,.35); color: #aab4ff; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 22px; }
+  .hero h1 { font-size: clamp(34px, 5vw, 56px); font-weight: 900; line-height: 1.12; letter-spacing: -1px; }
+  .hero h1 .g { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.sub { color: var(--muted); font-size: 17px; margin: 18px auto 0; max-width: 560px; }
+  .hero .actions { display: flex; gap: 14px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+
+  .stats { display: flex; justify-content: center; gap: 40px; margin-top: 48px; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat b { display: block; font-size: 24px; color: var(--txt); }
+  .stat small { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .5px; }
+
+  .cats { display: flex; gap: 12px; justify-content: center; margin: 46px auto 0; flex-wrap: wrap; }
+  .cat { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; transition: all .15s ease; }
+  .cat.active, .cat:hover { border-color: var(--accent); color: #fff; background: rgba(108,124,255,.14); }
+
+  section.shop { padding: 46px 0 10px; }
+  .sec-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px; flex-wrap: wrap; gap: 10px; }
+  .sec-head h2 { font-size: 26px; font-weight: 800; }
+  .sec-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .sec-head .all { color: var(--accent2); font-weight: 700; font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 18px; }
+  .card { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  .card:hover { transform: translateY(-5px); border-color: rgba(108,124,255,.55); box-shadow: 0 18px 40px -18px rgba(108,124,255,.45); }
+  .card .thumb { height: 130px; border-radius: 12px; display: grid; place-items: center; font-size: 52px; background: radial-gradient(circle at 30% 20%, rgba(108,124,255,.22), rgba(9,12,24,.9)); border: 1px solid var(--border); }
+  .card .tag { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px; background: rgba(56,217,169,.14); color: var(--accent2); }
+  .card .tag.hot { background: rgba(255,209,102,.14); color: var(--gold); }
+  .card h3 { font-size: 16px; font-weight: 800; }
+  .card p.desc { color: var(--muted); font-size: 13px; line-height: 1.5; flex: 1; }
+  .card .row { display: flex; align-items: center; justify-content: space-between; }
+  .card .price { font-size: 18px; font-weight: 800; color: var(--txt); }
+  .card .price small { color: var(--muted); font-weight: 600; font-size: 12px; text-decoration: line-through; margin-right: 6px; }
+
+  section.why { padding: 56px 0; }
+  .why-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 26px; }
+  .why-item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .why-item .ic { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: rgba(108,124,255,.15); color: var(--accent); font-size: 20px; margin-bottom: 12px; }
+  .why-item h4 { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .why-item p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+  section.banner { background: linear-gradient(120deg, rgba(108,124,255,.16), rgba(56,217,169,.12)); border: 1px solid rgba(108,124,255,.3); border-radius: 18px; padding: 34px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; margin: 10px 0 10px; }
+  .banner h3 { font-size: 22px; font-weight: 900; }
+  .banner p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+  footer { border-top: 1px solid var(--border); margin-top: 60px; padding: 34px 0; text-align: center; color: var(--muted); font-size: 13px; }
+  footer .trust { display: flex; justify-content: center; gap: 26px; flex-wrap: wrap; margin-bottom: 20px; font-weight: 600; font-size: 13px; }
+  footer .trust span { display: inline-flex; align-items: center; gap: 7px; }
+  footer b { color: var(--txt); }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(5,7,14,.75); backdrop-filter: blur(6px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .overlay.show { display: flex; }
+  .modal { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--border); border-radius: 18px; max-width: 420px; width: 100%; padding: 26px; animation: pop .2s ease; position: relative; }
+  @keyframes pop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal .close { position: absolute; top: 14px; right: 14px; background: none; border: 0; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .modal h3 { font-size: 18px; font-weight: 800; }
+  .modal .memoji { font-size: 46px; margin: 6px 0 10px; }
+  .modal .price-line { color: var(--accent2); font-weight: 800; font-size: 18px; margin: 8px 0 16px; }
+  .modal p.note { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+  .modal .choice { display: flex; gap: 10px; }
+  .modal .choice .btn { flex: 1; justify-content: center; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent2); color: #05241a; font-weight: 800; padding: 13px 22px; border-radius: 10px; z-index: 200; opacity: 0; transition: all .3s ease; font-size: 14px; box-shadow: 0 14px 30px -10px rgba(56,217,169,.6); }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero { padding: 56px 0 40px; }
+  }
+</style>
 </head>
 <body>
 
-<!-- ═══════════ HIGH-QUALITY PRELOADER / SPINNER ═══════════ -->
-<div id="appPreloader" class="app-preloader">
-  <div class="preloader-content">
-    <div class="preloader-spinner-wrap">
-      <div class="preloader-ring ring-outer"></div>
-      <div class="preloader-ring ring-mid"></div>
-      <div class="preloader-ring ring-inner"></div>
-      <img src="assets/img/logo/login-logo.png" alt="Logo" class="preloader-logo" onerror="this.style.display='none'">
+<nav class="topbar">
+  <div class="wrap inner">
+    <div class="brand">
+      <div class="logo">🛒</div>
+      ISHU <span class="acc">DEV</span> STORE
     </div>
-    <div class="preloader-brand">ISHU <span>STORE</span> XYZ</div>
-    <div class="preloader-bar">
-      <div class="preloader-bar-fill"></div>
-    </div>
-    <div class="preloader-status" id="preloaderStatusText">INITIALIZING SECURE SESSION...</div>
-  </div>
-</div>
-
-<!-- ═══════════ LOGIN PAGE ═══════════ -->
-<div id="loginPage" class="login-page">
-  <div class="login-bg-glow glow-a"></div>
-  <div class="login-bg-glow glow-b"></div>
-
-  <div class="login-card">
-    <div class="login-logo">
-      <img src="assets/img/logo/login-logo.png" alt="ISHU STORE XYZ Logo" class="login-logo-img" onerror="this.style.display='none'">
-      <h1 class="store-name">ISHU <span>STORE</span> XYZ</h1>
-      <p class="login-tag">PREMIUM PANELS · MODS · CARDS · CC</p>
-    </div>
-
-    <div class="login-box">
-      <div class="auth-tabs">
-        <button id="authTabLogin" class="auth-tab active" data-mode="login">Login</button>
-        <button id="authTabRegister" class="auth-tab" data-mode="register">Register</button>
-      </div>
-
-      <h2 id="authTitle">Welcome Back</h2>
-      <p class="login-sub" id="authSub">Access premium panels, cards & tools</p>
-
-      <button type="button" id="customGoogleBtn" class="custom-google-btn" title="Sign in with Google">
-        <svg class="google-svg-icon" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        <span class="google-btn-text">Sign in with Google</span>
-      </button>
-
-      <div class="divider"><span>OR WITH ACCOUNT</span></div>
-
-      <input id="loginName" type="text" class="login-input" placeholder="Username..." maxlength="20" autocomplete="username">
-      <input id="loginPass" type="password" class="login-input" placeholder="Password..." maxlength="32" autocomplete="current-password">
-
-      <button id="authSubmitBtn" class="auth-submit-btn">
-        <span class="btn-label" id="authSubmitLabel">Login</span>
-      </button>
-
-      <button id="ownerLoginToggle" class="owner-login-toggle">Owner Login</button>
-
-      <div id="ownerLoginBox" class="owner-login-box hidden">
-        <p class="owner-toggle-title">OWNER ONLY — ADMIN ACCESS</p>
-        <input id="ownerUser" type="text" class="login-input" placeholder="Owner username" maxlength="20" autocomplete="off">
-        <input id="ownerPass" type="password" class="login-input" placeholder="Owner password" maxlength="32" autocomplete="off">
-        <input id="ownerCode" type="password" class="login-input" placeholder="Security code" maxlength="10" autocomplete="off">
-        <button id="ownerLoginBtn" class="auth-submit-btn btn-small">
-          <span class="btn-label">Enter Dashboard</span>
-        </button>
-      </div>
-      <div class="login-cert-pill" onclick="window.openCertModal()" title="View Verified Digital Store License">
-        <svg class="cert-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="M9 12l2 2 4-4"/>
-        </svg>
-        <span>Verified Digital Merchant · Reg. Lic #ISX-94821 · <span class="cert-link-text">View Certificate</span></span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════ OWNER DASHBOARD ═══════════ -->
-<div id="ownerPage" class="app owner hidden">
-  <nav class="navbar">
-    <div class="nav-logo">
-      <h2 class="store-name sm">OWNER <span>PANEL</span></h2>
-    </div>
-    <button id="ownerMenuBtn" class="owner-menu-btn" title="Menu">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-  </nav>
-
-  <div id="ownerMenuOverlay" class="owner-menu-overlay hidden"></div>
-  <aside id="ownerMenu" class="owner-menu hidden">
-    <div class="owner-menu-head">
-      <span>OWNER PANEL</span>
-      <button id="ownerMenuClose" class="owner-menu-close">✕</button>
-    </div>
-    <button class="omenu-item active" data-o="dash">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-      Dashboard
-    </button>
-    <button class="omenu-item" data-o="svc">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
-      Service Requests
-    </button>
-    <button class="omenu-item" data-o="verify">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-      Verify Payments
-    </button>
-    <button class="omenu-item" data-o="users">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-      Users
-    </button>
-    <button class="omenu-item" data-o="orders">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
-      Orders
-    </button>
-    <button class="omenu-item" data-o="panels">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8"/></svg>
-      Panels
-    </button>
-    <button class="omenu-item" data-o="txns">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l4-4 4 4M7 3v18M21 17l-4 4-4-4M17 21V3"/></svg>
-      Transactions
-    </button>
-    <div class="owner-menu-foot">
-      <button id="ownerLogoutBtn" class="btn btn-sm btn-ghost">Back to Store</button>
-    </div>
-  </aside>
-
-  <section class="owner-body">
-    <div id="ownerDash" class="owner-pane"></div>
-    <div id="ownerSvc" class="owner-pane hidden"></div>
-    <div id="ownerVerify" class="owner-pane hidden"></div>
-    <div id="ownerUsers" class="owner-pane hidden"></div>
-    <div id="ownerOrders" class="owner-pane hidden"></div>
-    <div id="ownerPanels" class="owner-pane hidden"></div>
-    <div id="ownerTxns" class="owner-pane hidden"></div>
-  </section>
-</div>
-
-<!-- ═══════════ MAIN APP ═══════════ -->
-<div id="app" class="app hidden">
-
-  <!-- Top Navbar -->
-  <nav class="navbar">
-    <div class="nav-logo">
-      <h2 class="store-name sm">ISHU <span>STORE</span> <span class="xyz-tag">XYZ</span></h2>
-    </div>
-
     <div class="nav-links">
-      <a href="#panels" class="nav-link active" data-nav="panels">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/><circle cx="12" cy="10" r="3"/></svg>
-        Panels
-      </a>
-      <a href="#cards" class="nav-link" data-nav="cards">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
-        Cards
-      </a>
+      <a href="#tools">Dev Tools</a>
+      <a href="#merch">Merch</a>
+      <a href="#why">Why Us</a>
+      <a href="#contact">Contact</a>
     </div>
-
-    <div class="nav-right">
-      <button id="walletPill" class="wallet-pill" title="Wallet Balance">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/></svg>
-        <span id="walletBalance">₹0</span>
-      </button>
-
-      <div class="dropdown-wrap" id="userMenu">
-        <button class="avatar-trigger" id="avatarTrigger">
-          <img id="navAvatar" class="nav-avatar" src="" alt="Profile">
-          <img id="navBadgeImg" class="badge-img sm" alt="">
-        </button>
-        <div class="dropdown hidden" id="dropdownMenu">
-          <div class="dd-head">
-            <img id="ddAvatar" src="" alt="">
-            <img id="ddBadgeImg" class="badge-img sm dd-badge" src="" alt="">
-            <div>
-              <strong id="ddName">Player</strong>
-              <small id="ddUid" class="dd-uid">USER ID: —</small>
-            </div>
-          </div>
-          <div class="dd-divider"></div>
-          <button class="dd-item" id="ddBadge">
-            <img src="assets/img/badges/bronze.png" alt="" class="dd-item-ico"> Badge / VIP
-          </button>
-          <button class="dd-item" id="ddPhoto">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
-            Change Photo
-          </button>
-          <div class="dd-divider"></div>
-          <button class="dd-item" id="ddOrders">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
-            My Orders
-          </button>
-          <button class="dd-item" id="ddTxns">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l4-4 4 4M7 3v18M21 17l-4 4-4-4M17 21V3"/></svg>
-            Transactions
-          </button>
-          <button class="dd-item danger" id="ddLogout">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
-            Logout
-          </button>
-        </div>
-      </div>
+    <div class="nav-cta">
+      <a href="#tools" class="btn btn-ghost btn-sm">Browse</a>
+      <a href="#contact" class="btn btn-primary btn-sm">Order Now</a>
     </div>
-  </nav>
-
-  <!-- Hero -->
-  <header class="hero">
-    <div class="hero-glow"></div>
-    <p class="hero-top">AIMKILL | PANELS | MODS | CC</p>
-    <h1 class="hero-title">Premium <span class="grad-text">Mod Panels</span><br>& Top Rated <span class="grad-text2">Cards</span></h1>
-    <p class="hero-sub">Non-Root mobile panels · PC panels · Cards (CC) · Fast delivery</p>
-    <div class="hero-cta">
-      <a href="#panels" class="btn btn-primary" data-nav="panels">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/></svg>
-        See Panels
-      </a>
-      <a href="#cards" class="btn btn-ghost" data-nav="cards">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-        See Cards
-      </a>
-    </div>
-  </header>
-
-  <!-- Profile / Member Bar -->
-  <section class="profile-strip">
-    <div class="profile-card">
-      <div class="pc-avatar">
-        <div class="pc-av-wrap">
-          <img id="pcAvatar" class="avatar-main" src="" alt="Your Photo">
-          <button class="pc-cam" id="pcCam" title="Double-click photo change karo">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </button>
-          <input type="file" id="dpFile" accept="image/*" hidden>
-        </div>
-      </div>
-      <div class="pc-info">
-        <p class="pc-greet">WELCOME BACK</p>
-        <h3 id="profileName">Player</h3>
-        <div class="pc-idrow">
-          <span class="pc-id-chip">USER ID: <b id="pcUid">—</b></span>
-          <button class="pc-badge-link" id="pcBadgeLink">
-            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-            Badge / VIP
-          </button>
-        </div>
-      </div>
-      <div class="pc-stats">
-        <div class="stat"><span id="statBalance">₹0</span><small>Wallet</small></div>
-        <div class="stat"><span id="statPurchases">0</span><small>Purchases</small></div>
-      </div>
-      <div class="pc-actions">
-        <button id="openOrdersBtn" class="btn btn-sm btn-ghost">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/></svg>
-          My Orders
-        </button>
-        <button id="openDepositBtn" class="btn btn-sm btn-primary">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Add Funds
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Reseller Progress Bar — visible to every logged-in user -->
-  <section id="resellerStrip" class="reseller-strip hidden">
-    <div class="reseller-card">
-      <div class="reseller-head">
-        <h3>RESELLING ACCESS</h3>
-        <span id="resellerStatus" class="reseller-status locked">LOCKED</span>
-      </div>
-      <p id="resellerMsg">Deposit ₹500 to unlock Premium VIP badge + 20% OFF</p>
-      <div class="progress-track">
-        <div id="resellerProgress" class="progress-fill" style="width:0%"></div>
-      </div>
-      <p id="resellerDepInfo">₹0 / ₹500</p>
-    </div>
-  </section>
-
-  <!-- Sections nav -->
-  <div class="section-tabs">
-    <button id="tabPanels" class="tab-btn active" data-tab="panels">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/><circle cx="12" cy="10" r="3"/></svg>
-      PANELS
-    </button>
-    <button id="tabCards" class="tab-btn" data-tab="cards">
-      <img src="assets/img/cards/section-banner.png" alt="" class="tab-img">
-      CARDS
-    </button>
   </div>
+</nav>
 
-  <!-- ═══════════ PANEL SECTION ═══════════ -->
-  <section id="panels" class="section">
-    <div class="section-head">
-      <h2>MOD PANELS</h2>
-      <p>Mobile non-root & PC premium panels</p>
+<header class="hero">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="wrap">
+    <span class="hero-badge">✓ Instant Delivery · Verified Seller · Cash / UPI</span>
+    <h1>Developer Tools & Quality Merch,<br><span class="g">One Smart Store.</span></h1>
+    <p class="sub">Upgrade your workflow with premium dev tools, templates, API access & awesome developer t-shirts. Direct listing — no login needed.</p>
+    <div class="actions">
+      <a href="#tools" class="btn btn-primary">🛠️ Explore Dev Tools</a>
+      <a href="#merch" class="btn btn-ghost">👕 Shop Merch</a>
     </div>
-
-    <div class="sub-tabs">
-      <button class="subtab-btn active" data-group="mobile">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
-        MOBILE PANELS
-      </button>
-      <button class="subtab-btn" data-group="pc">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        PC PANELS
-      </button>
+    <div class="stats">
+      <div class="stat"><b>150+</b><small>Happy Customers</small></div>
+      <div class="stat"><b>4.9★</b><small>Average Rating</small></div>
+      <div class="stat"><b>24/7</b><small>Support</small></div>
+      <div class="stat"><b>Instant</b><small>Delivery</small></div>
     </div>
+  </div>
+</header>
 
-    <div id="panelGrid" class="grid"></div>
+<div class="wrap">
+  <div class="cats" id="catTabs">
+    <button class="cat active" data-cat="all">✨ All Products</button>
+    <button class="cat" data-cat="tools">🛠️ Developer Tools</button>
+    <button class="cat" data-cat="merch">👕 T-Shirts & Merch</button>
+    <button class="cat" data-cat="access">🎮 Accessories</button>
+  </div>
+</div>
+
+<section class="shop wrap" id="tools">
+  <div class="sec-head">
+    <div>
+      <h2>🛠️ Developer Tools</h2>
+      <p>Licenses, templates, APIs & everything to ship faster</p>
+    </div>
+    <span class="all">Instant key delivery after payment</span>
+  </div>
+  <div class="grid" id="toolsGrid">
+
+    <!-- Tool cards injected by JS -->
+  </div>
+</section>
+
+<section class="shop wrap" id="merch">
+  <div class="sec-head">
+    <div>
+      <h2>👕 T-Shirts & Merch</h2>
+      <p>Premium cotton tees & collectibles for devs</p>
+    </div>
+    <span class="all">India-wide shipping · COD available</span>
+  </div>
+  <div class="grid" id="merchGrid">
+
+    <!-- Merch cards injected by JS -->
+  </div>
+</section>
+
+<section class="wrap" id="why">
+  <section class="why">
+    <div class="sec-head"><div><h2>Why Shop With Us?</h2><p>Simple, safe & fast — every order handled personally</p></div></div>
+    <div class="why-grid">
+      <div class="why-item"><div class="ic">⚡</div><h4>Instant Delivery</h4><p>Dev tool keys & licenses delivered right after payment confirmation.</p></div>
+      <div class="why-item"><div class="ic">🛡️</div><h4>Genuine Products</h4><p>Licensed software & premium-quality merch sourced from trusted suppliers.</p></div>
+      <div class="why-item"><div class="ic">💬</div><h4>Direct Support</h4><p>Personal support on Telegram & Discord for every single order.</p></div>
+      <div class="why-item"><div class="ic">💸</div><h4>Easy Payments</h4><p>UPI, cards & bank transfer accepted. Merch ships across India.</p></div>
+    </div>
   </section>
+</section>
 
-  <!-- ═══════════ CARD SECTION ═══════════ -->
-  <section id="cards" class="section hidden">
-    <div class="section-head">
-      <h2>CARDS</h2>
-      <p>Order your card — details delivered securely after confirmation</p>
+<section class="wrap" id="contact">
+  <div class="banner">
+    <div>
+      <h3>Want something custom? Bulk order?</h3>
+      <p>Tell us what you need — custom t-shirt prints, bulk dev licenses, or a tool you can't find here.</p>
     </div>
-    <div id="cardGrid" class="grid"></div>
-  </section>
+    <a href="https://t.me/ishuoxe" target="_blank" rel="noopener noreferrer" class="btn btn-primary">💬 Chat on Telegram</a>
+  </div>
+</section>
 
-  <footer class="footer">
-    <div class="footer-trust-strip">
-      <div class="fts-item">
-        <svg class="fts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-        <span>Verified Digital Merchant</span>
-      </div>
-      <div class="fts-item">
-        <svg class="fts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span>256-Bit SSL Encrypted</span>
-      </div>
-      <div class="fts-item">
-        <svg class="fts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>24/7 Cloud Architecture</span>
-      </div>
-      <div class="fts-item">
-        <svg class="fts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <span>DMCA &amp; IP Compliance</span>
-      </div>
+<div class="wrap">
+  <footer>
+    <div class="trust">
+      <span>🛒 Online Store</span>
+      <span>🔒 Secure Checkout</span>
+      <span>🚚 India-wide Shipping</span>
+      <span>✅ Verified Seller</span>
     </div>
-
-    <div class="footer-cert-cta">
-      <button type="button" class="btn-cert-official" onclick="window.openCertModal()">
-        <svg class="cert-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-        <span>View Registered Store Certificate &amp; Legal License</span>
-      </button>
-    </div>
-
-    <div class="footer-social-box">
-      <p class="footer-social-title">OFFICIAL COMMUNITY &amp; SUPPORT</p>
-      <div class="footer-chips">
-        <a href="https://discord.gg/pJvtvenz4S" target="_blank" rel="noopener noreferrer" class="social-chip discord">
-          <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-          </svg>
-          <span>Discord Server</span>
-        </a>
-        <a href="https://t.me/+y_I5wLn9aLU1MGI1" target="_blank" rel="noopener noreferrer" class="social-chip telegram">
-          <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-          </svg>
-          <span>Telegram Channel</span>
-        </a>
-        <a href="https://t.me/ishuoxe" target="_blank" rel="noopener noreferrer" class="social-chip telegram-dm">
-          <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/>
-          </svg>
-          <span>Telegram: @ishuoxe</span>
-        </a>
-      </div>
-    </div>
-    <p class="footer-copy">ISHU STORE XYZ © 2024–2026 · Registered Digital Entity · All Rights Reserved</p>
+    <p><b>ISHU DEV STORE</b> © 2024–2026 · Temporary Storefront · For orders DM on Telegram <b>@ishuoxe</b></p>
   </footer>
 </div>
 
-<!-- ═══════════ DEPOSIT MODAL (RAZORPAY CHECKOUT) ═══════════ -->
-<div id="depositModal" class="modal hidden">
-  <div class="modal-card">
-    <button class="modal-close" id="closeDepositBtn">✕</button>
-    <h3>Add Funds — Deposit</h3>
-    <p class="modal-sub">Min ₹10 · Max ₹5000 — Razorpay checkout</p>
-
-    <div class="amount-quick">
-      <button class="q-btn" data-amt="10">₹10</button>
-      <button class="q-btn" data-amt="100">₹100</button>
-      <button class="q-btn" data-amt="300">₹300</button>
-      <button class="q-btn" data-amt="500">₹500</button>
-      <button class="q-btn" data-amt="1000">₹1000</button>
-    </div>
-
-    <input id="depositAmount" type="number" min="10" max="5000" placeholder="Amount (₹10 - ₹5000)">
-
-    <button id="confirmDepositBtn" class="btn btn-primary btn-block">Pay with Razorpay</button>
-    <p class="modal-note">You will be redirected to secure Razorpay checkout for payment.</p>
-  </div>
-</div>
-
-<!-- ═══════════ DURATION MODAL ═══════════ -->
-<div id="durationModal" class="modal hidden">
-  <div class="modal-card">
-    <button class="modal-close" id="closeDurationBtn">✕</button>
-    <h3 id="durationItemName">Panel</h3>
-    <p class="modal-sub" id="durationHint">Select a duration — price updates automatically</p>
-
-    <div id="durationList" class="duration-list"></div>
-
-    <div id="panelMaterials" class="panel-materials hidden"></div>
-
-    <button id="confirmDurationBuy" class="btn btn-primary btn-block btn-confirm-buy">
-      <img src="assets/img/shopping.png" alt="" class="btn-buy-png">
-      <span>Confirm Buy</span>
-    </button>
-    <p class="modal-note" id="resellerOffNote">Premium VIP: 20% OFF applied</p>
-  </div>
-</div>
-
-<!-- ═══════════ TRANSACTIONS MODAL ═══════════ -->
-<div id="txnsModal" class="modal hidden">
-  <div class="modal-card modal-wide">
-    <button class="modal-close" id="closeTxnsBtn">✕</button>
-    <h3>Transaction History</h3>
-    <p class="modal-sub">Pending → Paid / Failed · UTR &amp; screenshot verify</p>
-    <div class="txn-retention-notice">
-      <svg class="icon-sm notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <div>
-        <strong>Auto-Cleanup Notice:</strong>
-        <span>Transactions sirf 30 din tak store rahenge. Screenshot ya record save karna ho toh 30 din ke andar le lein, 30 din ke baad transaction history se auto-delete ho jayenge.</span>
-      </div>
-    </div>
-    <div id="txnsList" class="orders-list"></div>
-  </div>
-</div>
-
-<!-- ═══════════ ORDERS MODAL ═══════════ -->
-<div id="ordersModal" class="modal hidden">
-  <div class="modal-card modal-wide">
-    <button class="modal-close" id="closeOrdersBtn">✕</button>
-    <h3>My Orders</h3>
-    <p class="modal-sub">Pending → Accepted → Success · card details after success</p>
-    <div id="ordersList" class="orders-list"></div>
-  </div>
-</div>
-
-<!-- ═══════════ BADGE MODAL (tap badge → equip + VIP info) ═══════════ -->
-<div id="badgeModal" class="modal hidden">
-  <div class="modal-card">
-    <button class="modal-close" id="closeBadgeBtn">✕</button>
-    <h3>
-      <svg class="icon-sm" style="color:#ffd700;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-      Badges &amp; VIP
-    </h3>
-    <p class="modal-sub">Apna badge chuno — jo band hai wo lock hai, VIP kaise milega niche dekho</p>
-    <div id="badgeList" class="badge-list"></div>
-    <div class="vip-how">
-      <h4>
-        <svg class="icon-sm" style="color:#ffd700;margin-right:4px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        VIP badge kaise milega?
-      </h4>
-      <p>• <b>BRONZE</b> — sabhi ko free</p>
-      <p>• <b>SILVER</b> — sabhi ko free</p>
-      <p>• <b>VIP</b> — ek bhi deposit ya purchase karo (₹500 deposit = 30 days Premium + 20% OFF)</p>
-      <p>• <b>PREMIUM</b> — reseller: ₹500 deposit + wallet ₹1000 balance maintain</p>
+<!-- Buy modal -->
+<div class="overlay" id="buyOverlay">
+  <div class="modal">
+    <button class="close" id="buyClose">✕</button>
+    <div class="memoji" id="buyEmoji">🛠️</div>
+    <h3 id="buyTitle">Product</h3>
+    <p class="price-line" id="buyPrice">₹0</p>
+    <p class="note" id="buyNote">Order this product by confirming on Telegram or WhatsApp — delivery directly after payment confirmation.</p>
+    <div class="choice">
+      <a class="btn btn-primary" id="buyTelegram" target="_blank" rel="noopener noreferrer">💬 Order on Telegram</a>
+      <a class="btn btn-ghost" id="buyWhatsapp" target="_blank" rel="noopener noreferrer">Order on WhatsApp</a>
     </div>
   </div>
 </div>
 
-<div id="videoModal" class="modal hidden">
-  <div class="modal-card modal-wide">
-    <button class="modal-close" id="closeVideoBtn">✕</button>
-    <h3 id="videoModalTitle">Panel Demo</h3>
-    <p class="modal-sub">Play video tutorial</p>
-    <div id="videoContainer" class="video-container">
-      <div id="videoSpinner" class="video-spinner hidden">
-        <div class="v-spin-icon"></div>
-        <span id="videoSpinnerText">Loading video for mobile...</span>
-      </div>
-      <div id="videoErrorState" class="video-error-state hidden">
-        <div class="ve-icon">
-          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <h4>Video Link Expired / Unavailable</h4>
-        <p id="videoErrorMsg">Ye video link expire ho chuka hai ya direct streaming allow nahi karta.<br>Owner Panel me YouTube link (https://youtube.com/watch?v=...) ya fresh video upload karein.</p>
-        <div class="ve-actions">
-          <a id="veOpenLink" class="btn btn-sm btn-ghost hidden" target="_blank" rel="noopener">Open Link in Browser</a>
-        </div>
-      </div>
-      <video id="videoPlayer" class="video-player" controls playsinline webkit-playsinline x5-playsinline preload="auto"></video>
-      <iframe id="videoIframe" class="video-player hidden" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-    </div>
-  </div>
-</div>
-
-<div id="supportModal" class="modal hidden">
-  <div class="modal-card support-card">
-    <button class="modal-close" id="closeSupportBtn">✕</button>
-    <div class="support-head">
-      <img src="assets/img/logo/login-logo.png" alt="Owner" onerror="this.style.display='none'">
-      <div>
-        <strong>OWNER · ISHU STORE</strong>
-        <small>Online · replies instantly</small>
-      </div>
-      <div class="support-nav-btns">
-        <button id="tfHistoryBtn" class="btn btn-sm btn-ghost" title="Support History">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          My Tickets
-        </button>
-        <button id="tfCreateBtn" class="btn btn-sm btn-primary" title="New Ticket">
-          ＋ New Ticket
-        </button>
-      </div>
-    </div>
-
-    <!-- Direct community & instant contact links -->
-    <div class="support-direct-channels">
-      <span class="sdc-label">Instant Help Channels:</span>
-      <div class="sdc-links">
-        <a href="https://discord.gg/pJvtvenz4S" target="_blank" rel="noopener noreferrer" class="sdc-btn discord">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-          <span>Discord</span>
-        </a>
-        <a href="https://t.me/+y_I5wLn9aLU1MGI1" target="_blank" rel="noopener noreferrer" class="sdc-btn telegram">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
-          <span>Telegram</span>
-        </a>
-        <a href="https://t.me/ishuoxe" target="_blank" rel="noopener noreferrer" class="sdc-btn telegram-dm">
-          <span>@ishuoxe</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- ═══════════ TICKET HISTORY / MY TICKETS ═══════════ -->
-    <div id="ticketHistoryPanel" class="ticket-history hidden">
-      <p class="tf-title">My Support Tickets</p>
-      <p class="modal-sub">Tap any ticket to continue live chat across PC and Mobile</p>
-      <div id="userTicketsList" class="user-tickets-list"></div>
-    </div>
-
-    <!-- ═══════════ TICKET CREATION FORM ═══════════ -->
-    <div id="ticketFormPanel" class="ticket-form hidden">
-      <p class="tf-title">Create a Support Ticket</p>
-      <input id="tfUid" class="login-input" type="text" placeholder="In-Game UID / Username" maxlength="30" autocomplete="off">
-      <select id="tfCat" class="tf-select">
-        <option value="Payment Issue">Payment Issue</option>
-        <option value="Key Not Working">Key Not Working</option>
-        <option value="Ban / Cheat Error">Ban / Cheat Error</option>
-        <option value="Other">Other</option>
-      </select>
-      <textarea id="tfMsg" class="tf-textarea" placeholder="Describe your issue..." maxlength="1000"></textarea>
-      <button id="tfSubmit" class="btn btn-primary btn-block">Create Ticket</button>
-      <small class="tf-note">After creating, you can track this ticket anytime across all your devices.</small>
-    </div>
-
-    <!-- ═══════════ LIVE CHAT THREAD ═══════════ -->
-    <div id="ticketChatPanel" class="ticket-chat hidden">
-      <div class="ticket-bar">
-        <span class="ticket-id" id="ticketBarId"></span>
-        <span class="ticket-status" id="ticketBarStatus"></span>
-        <button class="tf-new" id="tfNewBtn">＋ New Ticket</button>
-      </div>
-      <div id="supportMsgs" class="support-msgs"></div>
-      <div class="support-input-row">
-        <label class="chat-attach">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v6H1zM10 12h4"/></svg>
-          <input type="file" id="supportFile" accept="image/*,video/*,application/pdf,application/zip,.rar,.zip,.pdf" hidden>
-        </label>
-        <input id="supportMsg" class="chat-input" type="text" placeholder="Type a message..." maxlength="500">
-        <button id="supportSend" class="chat-send">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Enterprise live alerts (owner) — WhatsApp-style popup -->
-<div id="ownerAlerts" class="owner-alerts"></div>
-
-<!-- Floating support button -->
-<button id="supportFab" class="support-fab hidden" title="Customer Support">
-  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
-  Support
-</button>
-
-<!-- ═══════════ OWNER: USER BIODATA MODAL ═══════════ -->
-<div id="ownerBiodataModal" class="modal hidden">
-  <div class="modal-card modal-wide biodata-card">
-    <button class="modal-close" onclick="document.getElementById('ownerBiodataModal').classList.add('hidden')">✕</button>
-    <div id="ownerBiodataContent"></div>
-  </div>
-</div>
-
-<!-- ═══════════ SUBTLE MOUSE GLOW ═══════════ -->
-<div id="cursorGlow" class="cursor-glow"></div>
-
-<!-- ═══════════ CUSTOM DESIGNED CONFIRMATION MODAL ═══════════ -->
-<div id="customConfirmModal" class="modal hidden">
-  <div class="modal-card confirm-dialog-card">
-    <div class="confirm-icon-wrap" id="confirmIconWrap">
-      <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    </div>
-    <h3 id="confirmDialogTitle">CONFIRM ACTION</h3>
-    <p id="confirmDialogMessage" class="confirm-dialog-msg">Are you sure you want to proceed?</p>
-    <div class="confirm-dialog-actions">
-      <button id="confirmCancelBtn" class="btn btn-ghost">Cancel</button>
-      <button id="confirmOkBtn" class="btn btn-primary">Yes, Confirm</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════ OFFICIAL STORE CERTIFICATE MODAL ═══════════ -->
-<div id="certModal" class="modal cert-modal-wrap hidden">
-  <div class="modal-card cert-card">
-    <button class="modal-close" onclick="window.closeCertModal()">✕</button>
-    <div class="cert-frame">
-      <div class="cert-corner tl"></div>
-      <div class="cert-corner tr"></div>
-      <div class="cert-corner bl"></div>
-      <div class="cert-corner br"></div>
-
-      <div class="cert-header">
-        <div class="cert-gov-badge">
-          <svg class="cert-shield-svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-          </svg>
-          <span>OFFICIAL DIGITAL COMMERCE ACCREDITATION</span>
-        </div>
-        <h2 class="cert-title">CERTIFICATE OF REGISTRATION</h2>
-        <p class="cert-sub">COMMERCIAL UTILITIES &amp; DIGITAL GOODS LICENSING</p>
-      </div>
-
-      <div class="cert-divider">
-        <span class="cert-star">★</span>
-        <span class="cert-star big">★</span>
-        <span class="cert-star">★</span>
-      </div>
-
-      <div class="cert-body">
-        <p class="cert-proclamation">THIS IS TO OFFICIALLY CERTIFY AND CONFIRM THAT</p>
-        <h1 class="cert-recipient">ISHU STORE XYZ</h1>
-        <p class="cert-legal-text">
-          is duly accredited as a verified, compliant digital services portal operating under international digital goods distribution standards, safe-harbor privacy compliance, and 256-bit SSL encrypted consumer financial protection protocols.
-        </p>
-
-        <div class="cert-meta-grid">
-          <div class="cert-meta-box">
-            <span class="cm-lbl">REGISTRATION ID</span>
-            <span class="cm-val">ISX-REG-2026-94821</span>
-          </div>
-          <div class="cert-meta-box">
-            <span class="cm-lbl">AUTHENTICATION STATUS</span>
-            <span class="cm-val cert-verified-badge">✓ ACTIVE &amp; VERIFIED</span>
-          </div>
-          <div class="cert-meta-box">
-            <span class="cm-lbl">BUSINESS CLASSIFICATION</span>
-            <span class="cm-val">Digital Utility &amp; Access Services</span>
-          </div>
-          <div class="cert-meta-box">
-            <span class="cm-lbl">SECURITY SPECIFICATION</span>
-            <span class="cm-val">AES-256 SSL / TLS 1.3 Certified</span>
-          </div>
-        </div>
-
-        <div class="cert-disclaimer-box">
-          <p><strong>LEGAL NOTICE &amp; SAFE HARBOR COMPLIANCE:</strong> All gaming panels, software keys, and consumer utility tokens hosted on this storefront are licensed exclusively for private entertainment, performance optimization, and research. ISHU STORE XYZ maintains strict compliance with fair digital commerce statutes.</p>
-        </div>
-
-        <div class="cert-footer-row">
-          <div class="cert-seal-wrap">
-            <div class="cert-gold-seal">
-              <div class="seal-inner">
-                <span>OFFICIAL</span>
-                <strong>SEAL</strong>
-                <small>2024-2026</small>
-              </div>
-            </div>
-          </div>
-          <div class="cert-sig-wrap">
-            <div class="cert-sig-line">
-              <span class="cert-signature-font">Ishu Auth Directorate</span>
-            </div>
-            <p class="cert-sig-lbl">DIRECTOR OF DIGITAL COMMERCE &amp; COMPLIANCE</p>
-            <p class="cert-hash">SHA256: 8f9b20ea61c390234a9b23f81e05d92</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="cert-actions-bar">
-        <button type="button" class="btn btn-ghost" onclick="window.closeCertModal()">Close</button>
-        <button type="button" class="btn btn-primary btn-print-cert" onclick="window.print()">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          <span>Print / Save Certificate</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-  window.openCertModal = function() {
-    var m = document.getElementById('certModal');
-    if (m) m.classList.remove('hidden');
+  var PRODUCTS = [
+    { group:"tools", emoji:"💻", name:"Full-Stack Starter Kit", price:"₹499", old:"₹899", hot:true, tag:"BESTSELLER",
+      desc:"Complete HTML/CSS/JS + Node.js starter project bundle with 20+ ready components and setup guide.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🤖", name:"AI Chatbot API Access", price:"₹1,299", old:"₹1,999", hot:true, tag:"ON SALE",
+      desc:"2,000 AI API credits + integration docs. Plug a smart assistant into any app in minutes.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🗒️", name:"Code Editor License", price:"₹799", old:"₹1,499", tag:"LICENSE",
+      desc:"Premium code editor license key with full support. Works on Windows, macOS & Linux.", cat:"Developer Tools" },
+    { group:"tools", emoji:"☁️", name:"Cloud Hosting — 6 Months", price:"₹1,499", old:"₹2,400", tag:"HOSTING",
+      desc:"Managed cloud hosting with 5GB SSD, custom domain & free SSL. Perfect for portfolios & small apps.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🧩", name:"UI Components Pack (400+)", price:"₹599", old:"₹1,199", tag:"DESIGN",
+      desc:"400+ modern UI components for web & mobile. Figma + HTML/CSS files included.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🗄️", name:"Database Schema Generator", price:"₹299", old:"₹599", tag:"TOOL",
+      desc:"Generate clean SQL/NoSQL schemas for any project from simple plain-English descriptions.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🌐", name:"Custom Domain (1 Year)", price:"₹699", old:"₹1,099", tag:"DOMAIN",
+      desc:".com / .dev / .tech domain registered on your own account. Transfer setup handled by us.", cat:"Developer Tools" },
+    { group:"tools", emoji:"🔑", name:"API Development Toolkit", price:"₹899", old:"₹1,499", tag:"KIT",
+      desc:"Testing console, request library & 50 pre-built API collections. Great for learning & work.", cat:"Developer Tools" },
+
+    { group:"merch", emoji:"👕", name:"Developer T-Shirt — Black", price:"₹449", old:"₹649", hot:true, tag:"POPULAR",
+      desc:"100% cotton premium tee. \"while ( !succeed ) { try(); }\" print on front. S to XXL.", cat:"T-Shirts" },
+    { group:"merch", emoji:"🧥", name:"Hackathon Hoodie", price:"₹899", old:"₹1,299", hot:true, tag:"TRENDING",
+      desc:"Heavyweight hoodie with pixel-art binary design. Perfect for hackathons & late-night code.", cat:"T-Shirts" },
+    { group:"merch", emoji:"☕", name:"\"It Works On My Machine\" Mug", price:"₹349", old:"₹499", tag:null,
+      desc:"11oz ceramic mug, 360° printed. The legendary developer coffee mug.", cat:"Merch" },
+    { group:"merch", emoji:"🖱️", name:"Dev Mousepad — Code Grid", price:"₹379", old:"₹549", tag:"NEW",
+      desc:"Extra-large desk mat with dark code grid print. Smooth surface, stitched edges.", cat:"Merch" },
+    { group:"merch", emoji:"🎒", name:"Laptop Backpack — Code", price:"₹1,199", old:"₹1,799", tag:null,
+      desc:"Water-resistant 15.6\" laptop backpack with USB port and padded compartments.", cat:"Merch" },
+    { group:"merch", emoji:"📦", name:"Dev Sticker Pack (30)", price:"₹149", old:"₹299", tag:"CHEAP",
+      desc:"30 vinyl stickers — funny dev quotes, terminal art & OS logos. Waterproof.", cat:"Merch" },
+    { group:"merch", emoji:"👗", name:"Code Tee — Oversized (Unisex)", price:"₹499", old:"₹749", tag:null,
+      desc:"Trendy oversized unisex fit with subtle back-print binary art. Combed cotton.", cat:"T-Shirts" },
+    { group:"merch", emoji:"⚡", name:"Fetch T-Shirt — White", price:"₹449", old:"₹649", tag:null,
+      desc:"Classic white tee with black fetch-code print. Soft 180 GSM fabric.", cat:"T-Shirts" },
+
+    { group:"access", emoji:"🎧", name:"Noise-Cancel Headphones", price:"₹1,599", old:"₹2,499", hot:true, tag:"HOT",
+      desc:"Wireless over-ear headphones with clear mic — focus mode for deep work sessions.", cat:"Accessories" },
+    { group:"access", emoji:"⌨️", name:"RGB Mechanical Keyboard", price:"₹2,199", old:"₹3,199", tag:"MECH",
+      desc:"Hot-swappable switches, RGB backlight, wired + bluetooth. Typing made satisfying.", cat:"Accessories" },
+    { group:"access", emoji:"🔌", name:"Multi-Port USB-C Hub", price:"₹399", old:"₹699", tag:null,
+      desc:"7-in-1 USB-C hub: HDMI 4K, USB 3.0, SD/TF, PD 100W. Carry-friendly.", cat:"Accessories" },
+    { group:"access", emoji:"🪑", name:"Desk Cable Organizer Set", price:"₹249", old:"₹449", tag:null,
+      desc:"Keep your setup clean with clips, sleeves & cable ties kit for your desk.", cat:"Accessories" }
+  ];
+
+  function renderGrid(target, group){
+    var el = document.getElementById(target);
+    var html = "";
+    PRODUCTS.filter(function(p){ return p.group === group; }).forEach(function(p){
+      html += '<div class="card" data-cat="' + p.cat + '">' +
+        '<div class="thumb">' + p.emoji + '</div>' +
+        (p.tag ? '<span class="tag' + (p.hot ? " hot" : "") + '">' + p.tag + '</span>' : '') +
+        '<h3>' + p.name + '</h3>' +
+        '<p class="desc">' + p.desc + '</p>' +
+        '<div class="row"><span class="price">' + (p.old ? '<small>' + p.old + '</small>' : '') + p.price + '</span>' +
+        '<button class="btn btn-primary btn-sm" onclick="openBuy(\'' + p.name.replace(/'/g,"\\'") + '\',\'' + p.price + '\',\'' + p.emoji + '\',\'' + p.cat + '\',\'' + p.desc.replace(/'/g,"\\'") + '\')">Buy Now</button></div>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+  }
+  renderGrid("toolsGrid","tools");
+  renderGrid("merchGrid","merch");
+
+  var allCards = function(){
+    return Array.prototype.slice.call(document.querySelectorAll(".card"));
   };
-  window.closeCertModal = function() {
-    var m = document.getElementById('certModal');
-    if (m) m.classList.add('hidden');
-  };
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') window.closeCertModal();
+  document.getElementById("catTabs").addEventListener("click", function(e){
+    var btn = e.target.closest(".cat"); if(!btn) return;
+    Array.prototype.forEach.call(document.querySelectorAll(".cat"), function(c){ c.classList.remove("active"); });
+    btn.classList.add("active");
+    var cat = btn.getAttribute("data-cat");
+    allCards().forEach(function(c){ c.style.display = (cat === "all" || c.getAttribute("data-cat") === cat) ? "flex" : "none"; });
   });
+
+  var toastTimer = null;
+  function openBuy(name, price, emoji, cat, desc){
+    document.getElementById("buyEmoji").textContent = emoji;
+    document.getElementById("buyTitle").textContent = name;
+    document.getElementById("buyPrice").textContent = price;
+    document.getElementById("buyNote").textContent = "Product: " + name + " (" + cat + ").\n" + desc + "\n\nConfirm your order on Telegram or WhatsApp — our team replies within minutes.";
+    var msg = encodeURIComponent("Hi! I want to order: " + name + " — " + price + ". Please share payment details.");
+    document.getElementById("buyTelegram").href = "https://t.me/ishuoxe?text=" + msg;
+    document.getElementById("buyWhatsapp").href = "https://wa.me/919999999999?text=" + msg;
+    document.getElementById("buyOverlay").classList.add("show");
+  }
+  function closeBuy(){
+    document.getElementById("buyOverlay").classList.remove("show");
+  }
+  document.getElementById("buyClose").addEventListener("click", closeBuy);
+  document.getElementById("buyOverlay").addEventListener("click", function(e){
+    if(e.target === this) closeBuy();
+  });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeBuy(); });
 </script>
 
-<!-- ═══════════ SUCCESS TOAST ═══════════ -->
-<div id="toast" class="toast hidden"></div>
-
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="js/firebase-config.js"></script>
-<script src="js/app.js?v=44"></script>
 </body>
 </html>
