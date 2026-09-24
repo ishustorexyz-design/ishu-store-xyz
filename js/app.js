@@ -104,6 +104,7 @@ const ordersModal   = $('ordersModal');
   const ownerOrders     = $('ownerOrders');
   const ownerPanels     = $('ownerPanels');
   const ownerTxns       = $('ownerTxns');
+  const ownerPrices     = $('ownerPrices');
   const supportFab      = $('supportFab');
   const ownerAlerts     = $('ownerAlerts');
   const supportModal    = $('supportModal');
@@ -150,6 +151,7 @@ const ordersModal   = $('ordersModal');
     manid:   'assets/img/panels/pc/manid-silentkill-pc.jpg',
     silentPC:'assets/img/panels/pc/silent-aim-pc.webp',
     external:'assets/img/panels/pc/external-exe-pc.png',
+    streamer:'assets/img/panels/pc/streamer-mode.jpg',
     cardC:   'assets/img/cards/combo-card.png',
     cardG:   'assets/img/cards/golden-card.png',
     cardB:   'assets/img/cards/black-card.png',
@@ -193,6 +195,20 @@ const ordersModal   = $('ordersModal');
     { img: IMG.silentPC,name: 'SILENT AIM INTERNAL',  tag: 'FOR PC', prices: [35, 80, 175, 800, 1050, 1400, 1900, 2100, 3700] },
     { img: IMG.external,name: 'EXTERNAL EXE FOR PC',  tag: 'FOR PC', prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] }
   ];
+
+  /* Streamer Mode — dedicated PC section, same PC key flow */
+  const STREAMER_PANELS = [
+    { img: IMG.streamer, name: 'Streamer Mode', tag: 'FOR PC', prices: [45, 105, 225, 1050, 1350, 1800, 2400, 2700, 4800] }
+  ];
+
+  /* Owner can override any panel's prices (all durations) from Panels → Set Panel Price */
+  const allPanelsList = () => [...MOBILE_PANELS, ...PC_PANELS, ...STREAMER_PANELS];
+  const panelPrices = name => {
+    const c = (loadEdits().panels || {})[name] || {};
+    if (Array.isArray(c.prices) && c.prices.length === DURATION_LABELS.length) return c.prices;
+    const base = allPanelsList().find(p => p.name === name);
+    return base ? base.prices : null;
+  };
 
   const CARDS = [
     { img: IMG.cardC, name: 'Combo Card',           price: 1100, minBal: 5000,    maxBal: 100000,  tier: 'combo' },
@@ -1241,12 +1257,12 @@ const ordersModal   = $('ordersModal');
   }
 
   function ownerPane(key) {
-    return { dash: ownerDash, svc: ownerSvc, verify: ownerVerify, users: ownerUsers, orders: ownerOrders, panels: ownerPanels, txns: ownerTxns }[key];
+    return { dash: ownerDash, svc: ownerSvc, verify: ownerVerify, users: ownerUsers, orders: ownerOrders, panels: ownerPanels, txns: ownerTxns, prices: ownerPrices }[key];
   }
 
   function renderOwner(key) {
     const pane = ownerPane(key);
-    ['dash','svc','verify','users','orders','panels','txns'].forEach(k => ownerPane(k).classList.add('hidden'));
+    ['dash','svc','verify','users','orders','panels','txns','prices'].forEach(k => ownerPane(k).classList.add('hidden'));
     if (!pane) return;
     pane.classList.remove('hidden');
     if (key === 'dash') renderOwnerDash();
@@ -1256,6 +1272,7 @@ const ordersModal   = $('ordersModal');
     else if (key === 'orders') renderOwnerOrders();
     else if (key === 'panels') renderOwnerPanels();
     else if (key === 'txns') renderOwnerTxns();
+    else if (key === 'prices') renderOwnerPrices();
   }
 
   function renderOwnerDash() {
@@ -1779,7 +1796,7 @@ const ordersModal   = $('ordersModal');
 
   function renderOwnerPanels() {
     const maint = loadMaint();
-    const allPanels = [...MOBILE_PANELS, ...PC_PANELS];
+    const allPanels = [...MOBILE_PANELS, ...PC_PANELS, ...STREAMER_PANELS];
     
     // Preserve which edit accordion panels are currently open
     const openSet = new Set();
@@ -1880,6 +1897,77 @@ const ordersModal   = $('ordersModal');
       <h3 class="owner-subhead">Cards — Sold Out / Photo</h3>
       <div class="admin-list">${cardsHTML}</div>`;
   }
+
+  /* ─────────── Owner: Set Panel Price (all panels — mobile, PC, streamer) ─────────── */
+  function renderOwnerPrices() {
+    const all = allPanelsList();
+    const html = all.map((p, i) => {
+      const cfg = (loadEdits().panels || {})[p.name] || {};
+      const cur = cfg.prices;
+      const prices = (Array.isArray(cur) && cur.length === DURATION_LABELS.length) ? cur : p.prices;
+      const img = cfg.img || p.img;
+      const isCustom = Array.isArray(cur) && cur.length === DURATION_LABELS.length;
+      return `
+        <div class="editor-card">
+          <div class="editor-head">
+            <img src="${img}" class="editor-thumb" alt="">
+            <div class="editor-name">
+              <strong>${p.name}</strong>
+              <small class="mono">${p.tag || 'PC'} · ${isCustom ? 'CUSTOM' : 'DEFAULT'} · ${fmt(prices[0])}/hr</small>
+            </div>
+            <button class="btn btn-sm btn-pay" onclick="window.__savePanelPrice('${p.name.replace(/'/g, "\\'")}', ${i})">SAVE PRICE</button>
+          </div>
+          <p class="editor-label">Price har duration ke liye (₹) — khali chhodo to default</p>
+          <div class="prices-grid">
+            ${DURATION_LABELS.map((d, j) => `
+              <label class="price-cell">
+                <span>${d}</span>
+                <input type="number" min="1" step="1" class="txn-input" id="priceIn_${i}_${j}" value="${prices[j] != null ? prices[j] : ''}">
+              </label>
+            `).join('')}
+            <button class="btn btn-sm btn-ghost" onclick="window.__resetPanelPrice('${p.name.replace(/'/g, "\\'")}', ${i})">↺ Default</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    ownerPrices.innerHTML = `
+      <h3 class="owner-subhead">Set Your Panel Price</h3>
+      <div class="verify-info">
+        <p>Yahan se har panel (Mobile + PC + Streamer Mode) ka price set kar sakte ho. Har duration ka amount daalo aur <b>SAVE PRICE</b> dabao — change store par turant live ho jayega. Khali chhodo to wo duration default price par rahega. <b>↺ Default</b> se pura panel wapas original price par chala jaata hai.</p>
+      </div>
+      <div class="admin-list">${html}</div>`;
+  }
+
+  window.__savePanelPrice = (name, i) => {
+    const edits = loadEdits();
+    edits.panels[name] = edits.panels[name] || {};
+    const saved = [];
+    DURATION_LABELS.forEach((d, j) => {
+      const el = document.getElementById('priceIn_' + i + '_' + j);
+      const v = el ? parseFloat(el.value) : NaN;
+      saved[j] = (!isNaN(v) && v > 0) ? v : null;
+    });
+    if (saved.every(v => v == null)) {
+      delete edits.panels[name].prices;
+    } else {
+      const base = allPanelsList().find(b => b.name === name);
+      const def = base ? base.prices : [];
+      edits.panels[name].prices = saved.map((v, j) => (v != null ? v : (def[j] != null ? def[j] : 0)));
+    }
+    saveEdits(edits);
+    showToast(name + ' — price update ho gaya ✅');
+    renderOwner('prices');
+    renderGrid();
+  };
+
+  window.__resetPanelPrice = (name) => {
+    const edits = loadEdits();
+    if (edits.panels[name]) delete edits.panels[name].prices;
+    saveEdits(edits);
+    showToast(name + ' — default price par wapas ✅');
+    renderOwner('prices');
+    renderGrid();
+  };
 
   window.__toggleMaint = name => {
     const m = loadMaint();
@@ -3159,9 +3247,10 @@ setInterval(refreshLiveStore, 2000);
   function renderGrid() {
     const cardsSec = $('cards');
     if (!cardsSec.classList.contains('hidden')) { renderCardGrid(); return; }
-    const list = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
+    const list = currentGroup === 'mobile' ? MOBILE_PANELS : currentGroup === 'streamer' ? STREAMER_PANELS : PC_PANELS;
     panelGrid.innerHTML = list.map(p => {
-      const base1h = p.prices[0];
+      const prices = panelPrices(p.name) || p.prices;
+      const base1h = prices[0];
       const { price, off } = priceAfter(base1h);
       const maint = isMaintenance(p.name);
       const matsT = editMats(p.name);
@@ -3251,7 +3340,7 @@ setInterval(refreshLiveStore, 2000);
       return;
     }
 
-    const panel = [...MOBILE_PANELS, ...PC_PANELS].find(p => p.name === name);
+    const panel = allPanelsList().find(p => p.name === name);
     if (!panel) { showToast('Panel not found'); return; }
 
     durationItemName.textContent = name;
@@ -3259,8 +3348,9 @@ setInterval(refreshLiveStore, 2000);
     resellerOffNote.classList.toggle('hidden', !isPremiumActive());
 
     const off = isPremiumActive();
+    const prs = panelPrices(name) || panel.prices;
     durationList.innerHTML = DURATION_LABELS.map((dur, i) => {
-      const pr = panel.prices[i];
+      const pr = prs[i];
       const shown = off ? round5(pr * 0.8) : pr;
       return `
         <button class="duration-item ${i === 0 ? 'selected' : ''}" data-idx="${i}">
@@ -3297,7 +3387,7 @@ setInterval(refreshLiveStore, 2000);
       item.classList.add('selected');
     };
 
-    window._buyPayload = { name, type, img, prices: panel.prices };
+    window._buyPayload = { name, type, img, prices: panelPrices(name) || panel.prices };
     durationModal.classList.remove('hidden');
   };
 
@@ -3316,7 +3406,7 @@ setInterval(refreshLiveStore, 2000);
       openDeposit();
       return;
     }
-    const isPc = PC_PANELS.some(p => p.name === payload.name);
+    const isPc = [...PC_PANELS, ...STREAMER_PANELS].some(p => p.name === payload.name);
 
     if (isPc) {
       confirmDurationBuy.disabled = true;
@@ -3544,6 +3634,7 @@ setInterval(refreshLiveStore, 2000);
           ${o.details ? `
             <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
+                ${hasKey && expTime && expTime !== Infinity && now < expTime ? `<div class="order-warn"><span>⚠️</span> Key expire hone ke <b>24 ghante (dusre din)</b> baad ye order + key ki history <b>auto-delete</b> ho jayegi — storage khali rakhne ke liye.</div>` : ''}
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                   <b>${o.type === 'panel' ? (o.isPc ? '💻 PC LOGIN CREDENTIALS:' : '🔑 PANEL KEY:') : 'CARD DETAILS:'}</b>
                   ${keyStatusBadge}

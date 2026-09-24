@@ -1433,6 +1433,8 @@ body::before {
 .order-note { margin-top: 8px; font-size: 12.5px; color: #cfd4e2; background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; word-break: break-word; }
 .order-note.gold { color: #ffd700; border: 1px solid rgba(255,215,0,.3); }
 .order-note.red { color: #ff7878; border: 1px solid rgba(255,120,120,.3); }
+.order-warn { display:flex; align-items:flex-start; gap:7px; font-size:12px; line-height:1.45; color:#ffc045; background:rgba(255,170,0,.09); border:1px solid rgba(255,170,0,.35); border-radius:8px; padding:7px 9px; margin-bottom:8px; word-break:break-word; }
+.order-warn span { font-size:13px; line-height:1.2; }
 .order-status.refunded { background: rgba(255,120,120,.12); color: #ff7878; border: 1px solid rgba(255,120,120,.5); }
 
 /* ---------- OWNER VERIFY / TXNS ---------- */
@@ -1920,6 +1922,25 @@ body::before {
   0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
   50% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
 }
+
+/* ---------- OWNER: SET PANEL PRICE ---------- */
+.prices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.price-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.8px;
+  color: #9da6be;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.price-cell .txn-input { width: 100%; min-width: 0; }
 
 /* ───────────── OWNER USER MANAGEMENT & BIODATA ───────────── */
 .owner-user-toolbar {
