@@ -1435,6 +1435,15 @@ body::before {
 .order-note.red { color: #ff7878; border: 1px solid rgba(255,120,120,.3); }
 .order-warn { display:flex; align-items:flex-start; gap:7px; font-size:12px; line-height:1.45; color:#ffc045; background:rgba(255,170,0,.09); border:1px solid rgba(255,170,0,.35); border-radius:8px; padding:7px 9px; margin-bottom:8px; word-break:break-word; }
 .order-warn span { font-size:13px; line-height:1.2; }
+
+/* ---------- WARNING TICKER (news auto-scroll) ---------- */
+.ticker-wrap { display:flex; align-items:stretch; background:#0a0e1a; border-bottom:1px solid rgba(255,170,0,.35); overflow:hidden; position:relative; z-index:5; }
+.ticker-head { flex:0 0 auto; display:flex; align-items:center; padding:6px 12px; background:linear-gradient(90deg,#b45309,#f59e0b); color:#0a0e1a; font-weight:900; font-size:11px; letter-spacing:1.5px; text-shadow:0 1px 0 rgba(255,255,255,.35); }
+.ticker-box { flex:1; overflow:hidden; display:flex; align-items:center; min-width:0; }
+.ticker { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding-left:100%; animation:tickerScroll 30s linear infinite; will-change:transform; }
+.ticker-item { font-size:12px; font-weight:800; letter-spacing:.6px; color:#ffb020; padding:4px 10px; border-right:1px solid rgba(255,170,0,.25); }
+@keyframes tickerScroll { 0% { transform:translateX(0); } 100% { transform:translateX(-100%); } }
+@media (max-width:600px){ .ticker-head { font-size:9.5px; padding:5px 8px; } .ticker-item { font-size:10.5px; } }
 .order-status.refunded { background: rgba(255,120,120,.12); color: #ff7878; border: 1px solid rgba(255,120,120,.5); }
 
 /* ---------- OWNER VERIFY / TXNS ---------- */

@@ -151,7 +151,6 @@ const ordersModal   = $('ordersModal');
     manid:   'assets/img/panels/pc/manid-silentkill-pc.jpg',
     silentPC:'assets/img/panels/pc/silent-aim-pc.webp',
     external:'assets/img/panels/pc/external-exe-pc.png',
-    streamer:'assets/img/panels/pc/streamer-mode.jpg',
     cardC:   'assets/img/cards/combo-card.png',
     cardG:   'assets/img/cards/golden-card.png',
     cardB:   'assets/img/cards/black-card.png',
@@ -196,13 +195,8 @@ const ordersModal   = $('ordersModal');
     { img: IMG.external,name: 'EXTERNAL EXE FOR PC',  tag: 'FOR PC', prices: [40, 95, 200, 950, 1200, 1600, 2100, 2400, 4200] }
   ];
 
-  /* Streamer Mode — dedicated PC section, same PC key flow */
-  const STREAMER_PANELS = [
-    { img: IMG.streamer, name: 'Streamer Mode', tag: 'FOR PC', prices: [45, 105, 225, 1050, 1350, 1800, 2400, 2700, 4800] }
-  ];
-
   /* Owner can override any panel's prices (all durations) from Panels → Set Panel Price */
-  const allPanelsList = () => [...MOBILE_PANELS, ...PC_PANELS, ...STREAMER_PANELS];
+  const allPanelsList = () => [...MOBILE_PANELS, ...PC_PANELS];
   const panelPrices = name => {
     const c = (loadEdits().panels || {})[name] || {};
     if (Array.isArray(c.prices) && c.prices.length === DURATION_LABELS.length) return c.prices;
@@ -1796,7 +1790,7 @@ const ordersModal   = $('ordersModal');
 
   function renderOwnerPanels() {
     const maint = loadMaint();
-    const allPanels = [...MOBILE_PANELS, ...PC_PANELS, ...STREAMER_PANELS];
+    const allPanels = [...MOBILE_PANELS, ...PC_PANELS];
     
     // Preserve which edit accordion panels are currently open
     const openSet = new Set();
@@ -1898,7 +1892,7 @@ const ordersModal   = $('ordersModal');
       <div class="admin-list">${cardsHTML}</div>`;
   }
 
-  /* ─────────── Owner: Set Panel Price (all panels — mobile, PC, streamer) ─────────── */
+  /* ─────────── Owner: Set Panel Price (all panels — mobile + PC) ─────────── */
   function renderOwnerPrices() {
     const all = allPanelsList();
     const html = all.map((p, i) => {
@@ -1933,7 +1927,7 @@ const ordersModal   = $('ordersModal');
     ownerPrices.innerHTML = `
       <h3 class="owner-subhead">Set Your Panel Price</h3>
       <div class="verify-info">
-        <p>Yahan se har panel (Mobile + PC + Streamer Mode) ka price set kar sakte ho. Har duration ka amount daalo aur <b>SAVE PRICE</b> dabao — change store par turant live ho jayega. Khali chhodo to wo duration default price par rahega. <b>↺ Default</b> se pura panel wapas original price par chala jaata hai.</p>
+        <p>Yahan se har panel (Mobile + PC) ka price set kar sakte ho. Har duration ka amount daalo aur <b>SAVE PRICE</b> dabao — change store par turant live ho jayega. Khali chhodo to wo duration default price par rahega. <b>↺ Default</b> se pura panel wapas original price par chala jaata hai.</p>
       </div>
       <div class="admin-list">${html}</div>`;
   }
@@ -3247,7 +3241,7 @@ setInterval(refreshLiveStore, 2000);
   function renderGrid() {
     const cardsSec = $('cards');
     if (!cardsSec.classList.contains('hidden')) { renderCardGrid(); return; }
-    const list = currentGroup === 'mobile' ? MOBILE_PANELS : currentGroup === 'streamer' ? STREAMER_PANELS : PC_PANELS;
+    const list = currentGroup === 'pc' ? PC_PANELS : MOBILE_PANELS;
     panelGrid.innerHTML = list.map(p => {
       const prices = panelPrices(p.name) || p.prices;
       const base1h = prices[0];
@@ -3406,7 +3400,7 @@ setInterval(refreshLiveStore, 2000);
       openDeposit();
       return;
     }
-    const isPc = [...PC_PANELS, ...STREAMER_PANELS].some(p => p.name === payload.name);
+    const isPc = PC_PANELS.some(p => p.name === payload.name);
 
     if (isPc) {
       confirmDurationBuy.disabled = true;
@@ -3634,7 +3628,7 @@ setInterval(refreshLiveStore, 2000);
           ${o.details ? `
             <div class="order-note gold" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div>
-                ${hasKey && expTime && expTime !== Infinity && now < expTime ? `<div class="order-warn"><span>⚠️</span> Key expire hone ke <b>24 ghante (dusre din)</b> baad ye order + key ki history <b>auto-delete</b> ho jayegi — storage khali rakhne ke liye.</div>` : ''}
+                ${hasKey && expTime && expTime !== Infinity ? `<div class="order-warn"><span>⚠️</span><div><b>AUTO-DELETE NOTICE:</b> This order + key history will be <b>deleted automatically the day after your key expires</b> — to keep our storage clean. Example: a <b>1 Hour</b> key bought today is deleted tomorrow. A <b>30 Day</b> key is deleted the day after it expires.</div></div>` : ''}
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                   <b>${o.type === 'panel' ? (o.isPc ? '💻 PC LOGIN CREDENTIALS:' : '🔑 PANEL KEY:') : 'CARD DETAILS:'}</b>
                   ${keyStatusBadge}
