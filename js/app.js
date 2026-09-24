@@ -518,13 +518,36 @@ const ordersModal   = $('ordersModal');
         snap.forEach(doc => {
           cloudUsers[doc.id.toLowerCase()] = doc.data() || {};
         });
-        localStorage.setItem(USERS_KEY, JSON.stringify(cloudUsers));
+        // Merge: fresh local-only accounts (abhi register hue) cloud tak pahunchne se pehle wipe na ho
+        const existing = loadUsers();
+        const merged = Object.assign({}, existing, cloudUsers);
+        localStorage.setItem(USERS_KEY, JSON.stringify(merged));
         if (currentUser) {
           const me = cloudUsers[(currentUser.username || '').toLowerCase()];
           if (!me) {
-            currentUser = null;
-            showToast('Aapka account remove kar diya gaya hai');
-            setTimeout(() => location.reload(), 1500);
+            // Doc snapshot me missing hai — pehle verify karo ki sach me cloud se delete hua hai ya nahi
+            const uname = (currentUser.username || '').toLowerCase();
+            fb.fs.collection('users').doc(uname).get().then(d => {
+              if (d && d.exists) {
+                const fresh = d.data() || {};
+                fresh.updatedAt = Date.now();
+                currentUser = fresh;
+                const all = loadUsers();
+                all[uname] = fresh;
+                localStorage.setItem(USERS_KEY, JSON.stringify(all));
+                renderProfile();
+                return;
+              }
+              // Fresh register (90s andar) hai to cloud write abhi nahi pahuncha — session mat todo
+              if (Date.now() - (currentUser.createdAt || 0) < 90 * 1000) {
+                fb.fs.collection('users').doc(uname).set(currentUser, { merge: true }).catch(() => {});
+                showToast('Welcome to ISHU STORE XYZ — Account ready ✅');
+                return;
+              }
+              currentUser = null;
+              showToast('Aapka account remove kar diya gaya hai');
+              setTimeout(() => location.reload(), 1500);
+            }).catch(() => { /* offline / permission — session mat todo */ });
             return;
           }
           if ((me.updatedAt || 0) >= (currentUser.updatedAt || 0)) {
@@ -798,7 +821,7 @@ const ordersModal   = $('ordersModal');
         wallet: 0, deposits: 0, premiumUntil: 0, purchases: 0, banned: false, createdAt: Date.now(), updatedAt: Date.now()
       };
       saveUsers({ ...users, [username]: currentUser });
-      showToast('Account ban gaya — Welcome!');
+      showToast('Welcome to ISHU STORE XYZ — Account created ✅');
       enterStore();
       return;
     }
@@ -3313,12 +3336,21 @@ setInterval(refreshLiveStore, 2000);
       else if (idx === 7) durParam = '30d';
       else if (idx === 8) durParam = 'permanent';
 
+      // Client-side sahi expiry (ms) — status LIVE tab tak dikhega jab tak key ka time khatam na ho
+      const DURATION_MS = [
+        1 * 3600e3, 12 * 3600e3, 24 * 3600e3, 7 * 86400e3,
+        10 * 86400e3, 15 * 86400e3, 25 * 86400e3, 30 * 86400e3, Infinity
+      ];
+      const orderExpMs = DURATION_MS[idx] === Infinity ? Infinity : Date.now() + DURATION_MS[idx];
+
       const genUsername = (currentUser.username.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'user') + '_' + Math.floor(1000 + Math.random() * 9000);
       const genPassword = 'pc_' + Math.random().toString(36).substring(2, 8);
 
       const reqBody = {
-        key: 'ISHU_fina-Klv1-U4cv-mYUT-714O-Dl5Y-4ABo-ICeF',
-        appid: 'APP-1LHEK3',
+        key: 'ISHU_ED4O-9Ohz-LLT7-HwIy-UkuX-mZQS-2QWz-wRQk',
+        appid: 'APP-DVL74W',
+        ownerid: 'IHH231792GMAILCOM-TTYDK',
+        secret: 'SEC_5PCJ-nGNS-ex5m-uRYA-Ih4O-KZkH-Kstf-cDoH',
         username: genUsername,
         password: genPassword,
         type: 'user',
@@ -3349,6 +3381,7 @@ setInterval(refreshLiveStore, 2000);
             panelPass: genPassword,
             details: `User: ${genUsername} | Pass: ${genPassword}`,
             expires: data.expires || '',
+            expiresAt: orderExpMs,
             charged: cost
           });
           commit();
@@ -3411,9 +3444,12 @@ setInterval(refreshLiveStore, 2000);
   /* ─────────── Order Expiry & Auto-Cleanup Logic ─────────── */
   function getOrderExpiryTime(o) {
     if (!o) return null;
-    if (o.expiresAt && typeof o.expiresAt === 'number') return o.expiresAt;
+    if (o.expiresAt && typeof o.expiresAt === 'number') {
+      // Server/nerve seconds me timestamp de de to ms me convert karo
+      return o.expiresAt < 1e12 ? o.expiresAt * 1000 : o.expiresAt;
+    }
     if (o.expires) {
-      if (typeof o.expires === 'number') return o.expires;
+      if (typeof o.expires === 'number') return o.expires < 1e12 ? o.expires * 1000 : o.expires;
       const str = String(o.expires).trim();
       if (str.toLowerCase() === 'permanent' || str.toLowerCase() === 'lifetime') return Infinity;
       const parsed = Date.parse(str.replace(' ', 'T'));
