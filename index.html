@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ISHU DEV STORE — Developer Tools & Merch</title>
+<title>ISHU DEV STORE — Developer Services</title>
 <link rel="icon" type="image/png" href="assets/img/shopping.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,6 @@
     --accent: #6c7cff;
     --accent2: #38d9a9;
     --gold: #ffd166;
-    --danger: #ff6b81;
   }
   body { background: var(--bg); color: var(--txt); font-family: 'Inter', sans-serif; overflow-x: hidden; }
   a { color: inherit; text-decoration: none; }
@@ -67,7 +66,7 @@
   .sec-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
   .sec-head .all { color: var(--accent2); font-weight: 700; font-size: 14px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
   .card { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
   .card:hover { transform: translateY(-5px); border-color: rgba(108,124,255,.55); box-shadow: 0 18px 40px -18px rgba(108,124,255,.45); }
   .card .thumb { height: 130px; border-radius: 12px; display: grid; place-items: center; font-size: 52px; background: radial-gradient(circle at 30% 20%, rgba(108,124,255,.22), rgba(9,12,24,.9)); border: 1px solid var(--border); }
@@ -95,7 +94,6 @@
   footer .trust span { display: inline-flex; align-items: center; gap: 7px; }
   footer b { color: var(--txt); }
 
-  /* Modal */
   .overlay { position: fixed; inset: 0; background: rgba(5,7,14,.75); backdrop-filter: blur(6px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
   .overlay.show { display: flex; }
   .modal { background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--border); border-radius: 18px; max-width: 420px; width: 100%; padding: 26px; animation: pop .2s ease; position: relative; }
@@ -104,12 +102,9 @@
   .modal h3 { font-size: 18px; font-weight: 800; }
   .modal .memoji { font-size: 46px; margin: 6px 0 10px; }
   .modal .price-line { color: var(--accent2); font-weight: 800; font-size: 18px; margin: 8px 0 16px; }
-  .modal p.note { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+  .modal p.note { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 18px; white-space: pre-line; }
   .modal .choice { display: flex; gap: 10px; }
   .modal .choice .btn { flex: 1; justify-content: center; }
-
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent2); color: #05241a; font-weight: 800; padding: 13px 22px; border-radius: 10px; z-index: 200; opacity: 0; transition: all .3s ease; font-size: 14px; box-shadow: 0 14px 30px -10px rgba(56,217,169,.6); }
-  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
   @media (max-width: 640px) {
     .nav-links { display: none; }
@@ -126,13 +121,12 @@
       ISHU <span class="acc">DEV</span> STORE
     </div>
     <div class="nav-links">
-      <a href="#tools">Dev Tools</a>
-      <a href="#merch">Merch</a>
+      <a href="#services">Services</a>
       <a href="#why">Why Us</a>
       <a href="#contact">Contact</a>
     </div>
     <div class="nav-cta">
-      <a href="#tools" class="btn btn-ghost btn-sm">Browse</a>
+      <a href="#services" class="btn btn-ghost btn-sm">Browse</a>
       <a href="#contact" class="btn btn-primary btn-sm">Order Now</a>
     </div>
   </div>
@@ -143,11 +137,11 @@
   <div class="glow b"></div>
   <div class="wrap">
     <span class="hero-badge">✓ Instant Delivery · Verified Seller · Cash / UPI</span>
-    <h1>Developer Tools & Quality Merch,<br><span class="g">One Smart Store.</span></h1>
-    <p class="sub">Upgrade your workflow with premium dev tools, templates, API access & awesome developer t-shirts. Direct listing — no login needed.</p>
+    <h1>Trusted Developer Services,<br><span class="g">One Smart Store.</span></h1>
+    <p class="sub">Custom domains, SSL certificates & API access — simple, standard digital services. Direct listing, no login needed.</p>
     <div class="actions">
-      <a href="#tools" class="btn btn-primary">🛠️ Explore Dev Tools</a>
-      <a href="#merch" class="btn btn-ghost">👕 Shop Merch</a>
+      <a href="#services" class="btn btn-primary">🌐 Browse Services</a>
+      <a href="#contact" class="btn btn-ghost">💬 Ask a Question</a>
     </div>
     <div class="stats">
       <div class="stat"><b>150+</b><small>Happy Customers</small></div>
@@ -160,38 +154,23 @@
 
 <div class="wrap">
   <div class="cats" id="catTabs">
-    <button class="cat active" data-cat="all">✨ All Products</button>
-    <button class="cat" data-cat="tools">🛠️ Developer Tools</button>
-    <button class="cat" data-cat="merch">👕 T-Shirts & Merch</button>
-    <button class="cat" data-cat="access">🎮 Accessories</button>
+    <button class="cat active" data-cat="all">✨ All Services</button>
+    <button class="cat" data-cat="Domains & SSL">🌐 Domains &amp; SSL</button>
+    <button class="cat" data-cat="APIs">🔌 APIs</button>
   </div>
 </div>
 
-<section class="shop wrap" id="tools">
+<section class="shop wrap" id="services">
   <div class="sec-head">
     <div>
-      <h2>🛠️ Developer Tools</h2>
-      <p>Licenses, templates, APIs & everything to ship faster</p>
+      <h2>🌐 Digital Services</h2>
+      <p>Standard, everyday web services for developers & businesses</p>
     </div>
-    <span class="all">Instant key delivery after payment</span>
+    <span class="all">Instant delivery after payment</span>
   </div>
-  <div class="grid" id="toolsGrid">
+  <div class="grid" id="svcGrid">
 
-    <!-- Tool cards injected by JS -->
-  </div>
-</section>
-
-<section class="shop wrap" id="merch">
-  <div class="sec-head">
-    <div>
-      <h2>👕 T-Shirts & Merch</h2>
-      <p>Premium cotton tees & collectibles for devs</p>
-    </div>
-    <span class="all">India-wide shipping · COD available</span>
-  </div>
-  <div class="grid" id="merchGrid">
-
-    <!-- Merch cards injected by JS -->
+    <!-- Service cards injected by JS -->
   </div>
 </section>
 
@@ -199,10 +178,10 @@
   <section class="why">
     <div class="sec-head"><div><h2>Why Shop With Us?</h2><p>Simple, safe & fast — every order handled personally</p></div></div>
     <div class="why-grid">
-      <div class="why-item"><div class="ic">⚡</div><h4>Instant Delivery</h4><p>Dev tool keys & licenses delivered right after payment confirmation.</p></div>
-      <div class="why-item"><div class="ic">🛡️</div><h4>Genuine Products</h4><p>Licensed software & premium-quality merch sourced from trusted suppliers.</p></div>
+      <div class="why-item"><div class="ic">⚡</div><h4>Instant Delivery</h4><p>Domains, SSL & API keys delivered right after payment confirmation.</p></div>
+      <div class="why-item"><div class="ic">🛡️</div><h4>Registered Properly</h4><p>Everything is set up on your own name/account with official vendor records.</p></div>
       <div class="why-item"><div class="ic">💬</div><h4>Direct Support</h4><p>Personal support on Telegram & Discord for every single order.</p></div>
-      <div class="why-item"><div class="ic">💸</div><h4>Easy Payments</h4><p>UPI, cards & bank transfer accepted. Merch ships across India.</p></div>
+      <div class="why-item"><div class="ic">💸</div><h4>Easy Payments</h4><p>UPI, cards & bank transfer accepted.</p></div>
     </div>
   </section>
 </section>
@@ -210,8 +189,8 @@
 <section class="wrap" id="contact">
   <div class="banner">
     <div>
-      <h3>Want something custom? Bulk order?</h3>
-      <p>Tell us what you need — custom t-shirt prints, bulk dev licenses, or a tool you can't find here.</p>
+      <h3>Need a custom domain? Bulk API access?</h3>
+      <p>Tell us what you need — we'll help you get the right digital service at the right price.</p>
     </div>
     <a href="https://t.me/ishuoxe" target="_blank" rel="noopener noreferrer" class="btn btn-primary">💬 Chat on Telegram</a>
   </div>
@@ -222,7 +201,7 @@
     <div class="trust">
       <span>🛒 Online Store</span>
       <span>🔒 Secure Checkout</span>
-      <span>🚚 India-wide Shipping</span>
+      <span>🌐 Standard Digital Services</span>
       <span>✅ Verified Seller</span>
     </div>
     <p><b>ISHU DEV STORE</b> © 2024–2026 · Temporary Storefront · For orders DM on Telegram <b>@ishuoxe</b></p>
@@ -233,10 +212,10 @@
 <div class="overlay" id="buyOverlay">
   <div class="modal">
     <button class="close" id="buyClose">✕</button>
-    <div class="memoji" id="buyEmoji">🛠️</div>
-    <h3 id="buyTitle">Product</h3>
+    <div class="memoji" id="buyEmoji">🌐</div>
+    <h3 id="buyTitle">Service</h3>
     <p class="price-line" id="buyPrice">₹0</p>
-    <p class="note" id="buyNote">Order this product by confirming on Telegram or WhatsApp — delivery directly after payment confirmation.</p>
+    <p class="note" id="buyNote">Order this service by confirming on Telegram or WhatsApp — delivery directly after payment confirmation.</p>
     <div class="choice">
       <a class="btn btn-primary" id="buyTelegram" target="_blank" rel="noopener noreferrer">💬 Order on Telegram</a>
       <a class="btn btn-ghost" id="buyWhatsapp" target="_blank" rel="noopener noreferrer">Order on WhatsApp</a>
@@ -244,58 +223,26 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
   var PRODUCTS = [
-    { group:"tools", emoji:"💻", name:"Full-Stack Starter Kit", price:"₹499", old:"₹899", hot:true, tag:"BESTSELLER",
-      desc:"Complete HTML/CSS/JS + Node.js starter project bundle with 20+ ready components and setup guide.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🤖", name:"AI Chatbot API Access", price:"₹1,299", old:"₹1,999", hot:true, tag:"ON SALE",
-      desc:"2,000 AI API credits + integration docs. Plug a smart assistant into any app in minutes.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🗒️", name:"Code Editor License", price:"₹799", old:"₹1,499", tag:"LICENSE",
-      desc:"Premium code editor license key with full support. Works on Windows, macOS & Linux.", cat:"Developer Tools" },
-    { group:"tools", emoji:"☁️", name:"Cloud Hosting — 6 Months", price:"₹1,499", old:"₹2,400", tag:"HOSTING",
-      desc:"Managed cloud hosting with 5GB SSD, custom domain & free SSL. Perfect for portfolios & small apps.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🧩", name:"UI Components Pack (400+)", price:"₹599", old:"₹1,199", tag:"DESIGN",
-      desc:"400+ modern UI components for web & mobile. Figma + HTML/CSS files included.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🗄️", name:"Database Schema Generator", price:"₹299", old:"₹599", tag:"TOOL",
-      desc:"Generate clean SQL/NoSQL schemas for any project from simple plain-English descriptions.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🌐", name:"Custom Domain (1 Year)", price:"₹699", old:"₹1,099", tag:"DOMAIN",
-      desc:".com / .dev / .tech domain registered on your own account. Transfer setup handled by us.", cat:"Developer Tools" },
-    { group:"tools", emoji:"🔑", name:"API Development Toolkit", price:"₹899", old:"₹1,499", tag:"KIT",
-      desc:"Testing console, request library & 50 pre-built API collections. Great for learning & work.", cat:"Developer Tools" },
-
-    { group:"merch", emoji:"👕", name:"Developer T-Shirt — Black", price:"₹449", old:"₹649", hot:true, tag:"POPULAR",
-      desc:"100% cotton premium tee. \"while ( !succeed ) { try(); }\" print on front. S to XXL.", cat:"T-Shirts" },
-    { group:"merch", emoji:"🧥", name:"Hackathon Hoodie", price:"₹899", old:"₹1,299", hot:true, tag:"TRENDING",
-      desc:"Heavyweight hoodie with pixel-art binary design. Perfect for hackathons & late-night code.", cat:"T-Shirts" },
-    { group:"merch", emoji:"☕", name:"\"It Works On My Machine\" Mug", price:"₹349", old:"₹499", tag:null,
-      desc:"11oz ceramic mug, 360° printed. The legendary developer coffee mug.", cat:"Merch" },
-    { group:"merch", emoji:"🖱️", name:"Dev Mousepad — Code Grid", price:"₹379", old:"₹549", tag:"NEW",
-      desc:"Extra-large desk mat with dark code grid print. Smooth surface, stitched edges.", cat:"Merch" },
-    { group:"merch", emoji:"🎒", name:"Laptop Backpack — Code", price:"₹1,199", old:"₹1,799", tag:null,
-      desc:"Water-resistant 15.6\" laptop backpack with USB port and padded compartments.", cat:"Merch" },
-    { group:"merch", emoji:"📦", name:"Dev Sticker Pack (30)", price:"₹149", old:"₹299", tag:"CHEAP",
-      desc:"30 vinyl stickers — funny dev quotes, terminal art & OS logos. Waterproof.", cat:"Merch" },
-    { group:"merch", emoji:"👗", name:"Code Tee — Oversized (Unisex)", price:"₹499", old:"₹749", tag:null,
-      desc:"Trendy oversized unisex fit with subtle back-print binary art. Combed cotton.", cat:"T-Shirts" },
-    { group:"merch", emoji:"⚡", name:"Fetch T-Shirt — White", price:"₹449", old:"₹649", tag:null,
-      desc:"Classic white tee with black fetch-code print. Soft 180 GSM fabric.", cat:"T-Shirts" },
-
-    { group:"access", emoji:"🎧", name:"Noise-Cancel Headphones", price:"₹1,599", old:"₹2,499", hot:true, tag:"HOT",
-      desc:"Wireless over-ear headphones with clear mic — focus mode for deep work sessions.", cat:"Accessories" },
-    { group:"access", emoji:"⌨️", name:"RGB Mechanical Keyboard", price:"₹2,199", old:"₹3,199", tag:"MECH",
-      desc:"Hot-swappable switches, RGB backlight, wired + bluetooth. Typing made satisfying.", cat:"Accessories" },
-    { group:"access", emoji:"🔌", name:"Multi-Port USB-C Hub", price:"₹399", old:"₹699", tag:null,
-      desc:"7-in-1 USB-C hub: HDMI 4K, USB 3.0, SD/TF, PD 100W. Carry-friendly.", cat:"Accessories" },
-    { group:"access", emoji:"🪑", name:"Desk Cable Organizer Set", price:"₹249", old:"₹449", tag:null,
-      desc:"Keep your setup clean with clips, sleeves & cable ties kit for your desk.", cat:"Accessories" }
+    { emoji:"🌐", name:"Custom Domain (1 Year)", price:"₹699", old:"₹1,099", hot:true, tag:"BESTSELLER",
+      cat:"Domains & SSL",
+      desc:"Register your own .com / .dev / .tech domain — setup on your name. Renewal & transfer help included." },
+    { emoji:"🔒", name:"SSL Certificate (1 Year)", price:"₹699", old:"₹999", tag:"SECURE",
+      cat:"Domains & SSL",
+      desc:"Share a trusted SSL certificate for your website — HTTPS secured, browser-valid green lock." },
+    { emoji:"🔑", name:"API Access Credits", price:"₹499", old:"₹899", tag:"API",
+      cat:"APIs",
+      desc:"Premium API access credits for building apps — receive your access key instantly after payment." },
+    { emoji:"🧰", name:"API Development Toolkit", price:"₹899", old:"₹1,499", tag:"KIT",
+      cat:"APIs",
+      desc:"Testing console, request library & 50 pre-built API collections. Great for learning & work." }
   ];
 
-  function renderGrid(target, group){
-    var el = document.getElementById(target);
+  function renderGrid(){
+    var el = document.getElementById("svcGrid");
     var html = "";
-    PRODUCTS.filter(function(p){ return p.group === group; }).forEach(function(p){
+    PRODUCTS.forEach(function(p){
       html += '<div class="card" data-cat="' + p.cat + '">' +
         '<div class="thumb">' + p.emoji + '</div>' +
         (p.tag ? '<span class="tag' + (p.hot ? " hot" : "") + '">' + p.tag + '</span>' : '') +
@@ -307,12 +254,9 @@
     });
     el.innerHTML = html;
   }
-  renderGrid("toolsGrid","tools");
-  renderGrid("merchGrid","merch");
+  renderGrid();
 
-  var allCards = function(){
-    return Array.prototype.slice.call(document.querySelectorAll(".card"));
-  };
+  var allCards = function(){ return Array.prototype.slice.call(document.querySelectorAll(".card")); };
   document.getElementById("catTabs").addEventListener("click", function(e){
     var btn = e.target.closest(".cat"); if(!btn) return;
     Array.prototype.forEach.call(document.querySelectorAll(".cat"), function(c){ c.classList.remove("active"); });
@@ -321,24 +265,20 @@
     allCards().forEach(function(c){ c.style.display = (cat === "all" || c.getAttribute("data-cat") === cat) ? "flex" : "none"; });
   });
 
-  var toastTimer = null;
   function openBuy(name, price, emoji, cat, desc){
     document.getElementById("buyEmoji").textContent = emoji;
     document.getElementById("buyTitle").textContent = name;
     document.getElementById("buyPrice").textContent = price;
-    document.getElementById("buyNote").textContent = "Product: " + name + " (" + cat + ").\n" + desc + "\n\nConfirm your order on Telegram or WhatsApp — our team replies within minutes.";
+    document.getElementById("buyNote").textContent =
+      "Service: " + name + " (" + cat + ").\n" + desc + "\n\nConfirm your order on Telegram or WhatsApp — our team replies within minutes.";
     var msg = encodeURIComponent("Hi! I want to order: " + name + " — " + price + ". Please share payment details.");
     document.getElementById("buyTelegram").href = "https://t.me/ishuoxe?text=" + msg;
     document.getElementById("buyWhatsapp").href = "https://wa.me/919999999999?text=" + msg;
     document.getElementById("buyOverlay").classList.add("show");
   }
-  function closeBuy(){
-    document.getElementById("buyOverlay").classList.remove("show");
-  }
+  function closeBuy(){ document.getElementById("buyOverlay").classList.remove("show"); }
   document.getElementById("buyClose").addEventListener("click", closeBuy);
-  document.getElementById("buyOverlay").addEventListener("click", function(e){
-    if(e.target === this) closeBuy();
-  });
+  document.getElementById("buyOverlay").addEventListener("click", function(e){ if(e.target === this) closeBuy(); });
   document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeBuy(); });
 </script>
 
